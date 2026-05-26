@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>DSU My team</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind Configuration (Pastel Ethereal Theme) -->
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary": "#575e72",
+                        "surface-dim": "#d0dbed",
+                        "surface-container-highest": "#d9e3f6",
+                        "inverse-on-surface": "#eaf1ff",
+                        "tertiary-fixed": "#dbe2fa",
+                        "surface-variant": "#d9e3f6",
+                        "secondary": "#765469",
+                        "on-primary-fixed": "#221534",
+                        "on-primary-container": "#6a5a7e",
+                        "secondary-fixed-dim": "#e5bad3",
+                        "on-tertiary-fixed-variant": "#3f4759",
+                        "primary-container": "#e9d5ff",
+                        "primary": "#67587b",
+                        "on-primary-fixed-variant": "#4f4062",
+                        "surface-container-low": "#eff4ff",
+                        "on-secondary-fixed-variant": "#5c3d51",
+                        "primary-fixed": "#eddcff",
+                        "tertiary-container": "#d5dcf4",
+                        "secondary-container": "#fdd0ea",
+                        "secondary-fixed": "#ffd8ed",
+                        "on-error": "#ffffff",
+                        "surface-container-high": "#dee9fc",
+                        "on-error-container": "#93000a",
+                        "surface-tint": "#67587b",
+                        "primary-fixed-dim": "#d2bfe8",
+                        "on-tertiary-container": "#596074",
+                        "on-primary": "#ffffff",
+                        "inverse-primary": "#d2bfe8",
+                        "error-container": "#ffdad6",
+                        "on-background": "#121c2a",
+                        "outline-variant": "#cbc4ce",
+                        "on-surface": "#121c2a",
+                        "inverse-surface": "#27313f",
+                        "surface": "#f8f9ff",
+                        "on-tertiary": "#ffffff",
+                        "background": "#f8f9ff",
+                        "outline": "#7b757e",
+                        "on-secondary-container": "#79576c",
+                        "surface-bright": "#f8f9ff",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "surface-container": "#e6eeff",
+                        "tertiary-fixed-dim": "#bfc6dd",
+                        "on-surface-variant": "#49454d",
+                        "on-tertiary-fixed": "#141b2c",
+                        "error": "#ba1a1a",
+                        "on-secondary-fixed": "#2c1325"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-sm": "0.5rem",
+                        "margin-mobile": "1rem",
+                        "stack-lg": "2.5rem",
+                        "gutter": "1.5rem",
+                        "stack-md": "1rem",
+                        "container-max": "1200px"
+                    },
+                    "fontFamily": {
+                        "headline-sm": ["Plus Jakarta Sans"],
+                        "body-md": ["Plus Jakarta Sans"],
+                        "label-sm": ["Plus Jakarta Sans"],
+                        "label-md": ["Plus Jakarta Sans"],
+                        "headline-md": ["Plus Jakarta Sans"],
+                        "body-lg": ["Plus Jakarta Sans"],
+                        "headline-lg": ["Plus Jakarta Sans"]
+                    },
+                    "fontSize": {
+                        "headline-sm": ["20px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                        "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "label-sm": ["12px", {"lineHeight": "1.1", "fontWeight": "600"}],
+                        "label-md": ["14px", {"lineHeight": "1.2", "fontWeight": "500"}],
+                        "headline-md": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}],
+                        "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f8f9ff;
+            min-height: max(884px, 100dvh);
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #f3e7e9 0%, #e3eeff 99%, #e3eeff 100%);
+        }
+        .card-shadow {
+            box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.05);
+        }
+        .discord-gradient {
+            background: linear-gradient(135deg, rgba(233, 213, 255, 0.5) 0%, rgba(253, 208, 234, 0.5) 100%);
+        }
+        .brand-gradient-bg {
+            background: linear-gradient(135deg, #eddcff, #fdd0ea);
+        }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
+        
+        /* SPA View Transitions */
+        .page {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .page.active {
+            display: block;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="font-body-md text-on-surface antialiased pb-24 md:pb-0 flex flex-col">
+
+    <!-- Global TopAppBar -->
+    <header id="global-header" class="fixed top-0 w-full z-50 backdrop-blur-xl bg-surface/80 dark:bg-surface-container-low/80 shadow-[0px_4px_20px_rgba(0,0,0,0.05)] transition-all duration-300">
+        <div class="flex justify-between items-center px-margin-mobile h-16 w-full max-w-container-max mx-auto">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary font-bold" id="header-icon">group</span>
+                <h1 class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed-dim" id="header-title">DSU My team</h1>
+            </div>
+            <nav class="hidden md:flex items-center gap-6" id="desktop-nav">
+                <a href="#" onclick="navigate('dashboard')" class="text-primary font-label-md hover:opacity-80">대시보드</a>
+                <a href="#" onclick="navigate('matching-status')" class="text-on-surface-variant font-label-md hover:text-primary">팀 현황 목록</a>
+            </nav>
+            <div>
+                <button class="bg-primary text-on-primary font-label-md text-label-md px-4 py-2 rounded-full flex items-center gap-2 hover:bg-primary/90 transition-colors active:scale-95 duration-200">
+                    동서대 MYDEX 이동
+                    <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- SPA Container -->
+    <div id="app" class="flex-grow">
+        
+        <!-- ============================================== -->
+        <!-- 1. 메인 대시보드 (Main Dashboard)              -->
+        <!-- ============================================== -->
+        <main id="page-dashboard" class="page active max-w-container-max mx-auto pt-24 px-margin-mobile md:px-gutter pb-8 space-y-gutter">
+            <!-- Hero Section -->
+            <section class="w-full rounded-xl overflow-hidden card-shadow bg-white relative min-h-[300px] flex items-center p-8 gradient-bg">
+                <div class="relative z-10 w-full md:w-1/2 space-y-4">
+                    <h2 class="font-headline-lg text-headline-lg text-primary">함께 진행중인 프로그램</h2>
+                    <div class="glass-card rounded-lg p-6 inline-block mt-4">
+                        <h3 class="font-headline-sm text-headline-sm text-primary mb-2">스타트업 멘토링 프로그램</h3>
+                        <p class="font-body-md text-on-surface-variant">전문가와 함께하는 실전 창업 멘토링</p>
+                    </div>
+                </div>
+                <!-- Hero Background/Image Element -->
+                <div class="absolute inset-0 z-0 opacity-40 mix-blend-multiply" style="background-image: url('data:image/svg+xml;utf8,&lt;svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 1000 400\'&gt;&lt;path d=\'M0,200 Q250,50 500,200 T1000,200 L1000,400 L0,400 Z\' fill=\'%23e9d5ff\' opacity=\'0.5\'/&gt;&lt;/svg&gt;'); background-size: cover; background-position: center;"></div>
+            </section>
+
+            <!-- Bento Grid Cards -->
+            <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter">
+                <!-- Card 1: My Competency Index -->
+                <div class="bg-white rounded-xl p-6 card-shadow border border-surface-container flex flex-col justify-between aspect-square hover:-translate-y-1 transition-transform duration-300">
+                    <div class="flex justify-between items-start mb-4">
+                        <h3 class="font-headline-sm text-headline-sm text-primary">나의 역량 지수</h3>
+                        <span class="material-symbols-outlined text-tertiary">trending_up</span>
+                    </div>
+                    <div class="flex-grow flex items-center justify-center relative">
+                        <svg class="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" fill="transparent" r="40" stroke="#e9d5ff" stroke-width="8"></circle>
+                            <circle class="transition-all duration-1000 ease-out" cx="50" cy="50" fill="transparent" r="40" stroke="#67587b" stroke-dasharray="251.2" stroke-dashoffset="37.68" stroke-linecap="round" stroke-width="8"></circle>
+                        </svg>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center">
+                            <span class="font-headline-md text-headline-md text-primary font-bold">85</span>
+                            <span class="font-label-sm text-label-sm text-tertiary">/100</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 2: Apply for Matching -->
+                <div onclick="navigate('matching-step1')" class="cursor-pointer bg-white rounded-xl p-6 card-shadow border border-surface-container flex flex-col aspect-square hover:-translate-y-1 transition-transform duration-300 bg-gradient-to-br from-white to-primary-container/20">
+                    <div class="w-12 h-12 rounded-full bg-primary-container text-primary flex items-center justify-center mb-6">
+                        <span class="material-symbols-outlined">person_add</span>
+                    </div>
+                    <h3 class="font-headline-sm text-headline-sm text-on-surface mb-2">매칭 신청</h3>
+                    <p class="font-body-md text-on-surface-variant flex-grow">본인의 역량과 강점을 등록하고 최적의 팀원을 찾아보세요.</p>
+                    <div class="mt-4 flex justify-end">
+                        <span class="material-symbols-outlined text-primary">arrow_forward</span>
+                    </div>
+                </div>
+
+                <!-- Card 3: Recruit Members -->
+                <div onclick="navigate('recruitment-step1')" class="cursor-pointer bg-white rounded-xl p-6 card-shadow border border-surface-container flex flex-col aspect-square hover:-translate-y-1 transition-transform duration-300 bg-gradient-to-br from-white to-secondary-container/20">
+                    <div class="w-12 h-12 rounded-full bg-secondary-container text-secondary flex items-center justify-center mb-6">
+                        <span class="material-symbols-outlined">group_add</span>
+                    </div>
+                    <h3 class="font-headline-sm text-headline-sm text-on-surface mb-2">멤버 모집</h3>
+                    <p class="font-body-md text-on-surface-variant flex-grow">새로운 팀원을 모집하여 프로젝트를 시작하세요.</p>
+                    <div class="mt-4 flex justify-end">
+                        <span class="material-symbols-outlined text-secondary">arrow_forward</span>
+                    </div>
+                </div>
+
+                <!-- Card 4: Discord Match Board -->
+                <div class="glass-card rounded-xl p-6 card-shadow flex flex-col aspect-square hover:-translate-y-1 transition-transform duration-300 discord-gradient relative overflow-hidden backdrop-blur-xl bg-white/40 border border-white/50">
+                    <div class="flex justify-between items-start mb-6">
+                        <div class="w-12 h-12 rounded-2xl bg-white flex items-center justify-center p-2 shadow-sm">
+                            <img alt="Discord Logo" class="w-full h-full object-contain rounded-xl" src="https://lh3.googleusercontent.com/aida/ADBb0ug8s5dMZk8ckYsAAkbcvHZAyLOTjPxz0jYNb5Os-8RqNkO2LwqpNrZJuYiigKjJDtDdQhA6pISoMaZmvxxsSmWwZ3IYbyfxple8VpKY5bjVvg2kXTTEQ2VGCR5MC3HnFwxawxx5lP8taoRm5fkRN1p3ETAidy-inLXsPa4kHvFdGTYAeBjC0Xv1Lyp1kBnrO8jSZyKaoF5i3IqETbcKg-va4jc2_4uBcRYg7YWoSJRHawJO2H-byh6Pcgo">
+                        </div>
+                        <span class="bg-primary-container/50 text-primary-fixed-dim px-3 py-1 rounded-full font-label-sm text-label-sm font-bold border border-primary/10 backdrop-blur-md">
+                            DISCORD 연동 완료
+                        </span>
+                    </div>
+                    <h3 class="font-headline-sm text-headline-sm text-on-surface mb-2 relative z-10">팀 매칭 보드 (Discord)</h3>
+                    <p class="font-body-md text-on-surface-variant flex-grow relative z-10">디스코드 서버 내 실시간 팀 매칭 현황판으로 이동하여 현재 진행 상황을 확인하세요.</p>
+                    <div class="mt-4 flex justify-end relative z-10">
+                        <button class="bg-white/60 hover:bg-white/80 backdrop-blur-md w-10 h-10 rounded-full flex items-center justify-center transition-colors">
+                            <span class="material-symbols-outlined text-primary">open_in_new</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- ============================================== -->
+        <!-- 2. 매칭 신청 (Step 1)                          -->
+        <!-- ============================================== -->
+        <main id="page-matching-step1" class="page flex-grow w-full max-w-container-max mx-auto px-margin-mobile py-stack-md pt-24 pb-32 flex-col gap-stack-lg">
+            <h1 class="font-headline-lg text-headline-lg text-on-surface mb-6 text-center">신청서 (1/2)</h1>
+            
+            <section class="bg-surface-container-lowest rounded-xl shadow-sm border border-primary-container p-6 flex flex-col gap-stack-md mb-6 max-w-2xl mx-auto">
+                <h2 class="font-headline-sm text-headline-sm text-on-surface mb-2">기본 정보</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-stack-md">
+                    <div class="flex flex-col gap-2">
+                        <label class="font-label-md text-label-md text-on-surface-variant">이름 <span class="text-error">*</span></label>
+                        <input class="w-full bg-surface-bright border border-primary-container rounded-lg px-4 py-3 font-body-md focus:outline-none focus:ring-2 focus:ring-primary-container focus:border-primary transition-all" placeholder="홍길동" type="text">
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <label class="font-label-md text-label-md text-on-surface-variant">학번 <span class="text-error">*</span></label>
+                        <input class="w-full bg-surface-bright border border-primary-container rounded-lg px-4 py-3 font-body-md focus:outline-none focus:ring-2 focus:ring-primary-container focus:border-primary transition-all" placeholder="20230001" type="text">
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Footer Action for Step 1 -->
+            <div class="fixed bottom-16 md:bottom-0 left-0 w-full p-4 bg-surface/90 backdrop-blur-md border-t border-primary-container z-40 pb-safe">
+                <div class="max-w-2xl mx-auto">
+                    <button onclick="navigate('matching-step2')" class="w-full bg-gradient-to-r from-primary to-secondary text-on-primary rounded-lg py-4 font-headline-sm shadow-md active:scale-[0.98] transition-transform">
+                        다음으로 (2/2)
+                    </button>
+                </div>
+            </div>
+        </main>
+        
+        <!-- ============================================== -->
+        <!-- 3. 매칭 신청 (Step 2 - Placeholder)            -->
+        <!-- ============================================== -->
+        <main id="page-matching-step2" class="page flex-grow w-full max-w-container-max mx-auto px-margin-mobile py-stack-md pt-24 pb-32 flex-col gap-stack-lg">
+            <h1 class="font-headline-lg text-headline-lg text-on-surface mb-6 text-center">신청서 (2/2)</h1>
+            <div class="text-center p-12 bg-surface-container rounded-xl max-w-2xl mx-auto">
+                <p>여기에 필터링/추가 설정 폼 UI가 들어갑니다.</p>
+                <button onclick="navigate('keycard-result')" class="mt-8 bg-primary text-white px-8 py-3 rounded-full hover:bg-primary/90">
+                    제출 완료 (키카드 발급)
+                </button>
+            </div>
+        </main>
+
+        <!-- ============================================== -->
+        <!-- 4. 멤버 모집 (Step 1)                          -->
+        <!-- ============================================== -->
+        <main id="page-recruitment-step1" class="page flex-grow w-full max-w-container-max mx-auto px-margin-mobile py-stack-md pt-24 pb-32 flex-col gap-stack-lg">
+            <div class="max-w-xl mx-auto">
+                <div class="text-center mb-8">
+                    <span class="font-label-md text-label-md text-primary">1 / 2 단계</span>
+                    <h1 class="font-headline-lg text-headline-lg text-on-surface">멤버 모집 시작</h1>
+                    <p class="font-body-md text-body-md text-on-surface-variant">팀장의 정보를 입력해주세요.</p>
+                </div>
+                
+                <section class="bg-surface-container-lowest rounded-xl p-6 shadow-sm border border-primary-container/30 flex flex-col gap-4">
+                    <div class="flex flex-col gap-2">
+                        <label class="font-label-md text-on-surface" for="team_name">팀명 (프로젝트명)</label>
+                        <input class="w-full bg-surface px-4 py-3 rounded-lg border border-primary-container/50 focus:border-primary outline-none transition-all" id="team_name" placeholder="멋진 팀 이름" type="text">
+                    </div>
+                </section>
+                
+                <!-- Footer Action -->
+                <div class="fixed bottom-16 md:bottom-0 left-0 w-full bg-surface/90 backdrop-blur-md border-t border-primary-container/30 p-4 pb-safe shadow-sm z-50">
+                    <div class="max-w-xl mx-auto">
+                        <button onclick="navigate('recruitment-step2')" class="w-full bg-gradient-to-r from-primary to-secondary text-on-primary font-headline-sm py-4 rounded-full hover:opacity-90 active:scale-[0.98] transition-all flex justify-center gap-2">
+                            다음으로 (1/2) <span class="material-symbols-outlined">arrow_forward</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <!-- ============================================== -->
+        <!-- 5. 멤버 모집 (Step 2 - Placeholder)            -->
+        <!-- ============================================== -->
+        <main id="page-recruitment-step2" class="page flex-grow w-full max-w-container-max mx-auto px-margin-mobile py-stack-md pt-24 pb-32 flex-col gap-stack-lg">
+            <h1 class="font-headline-lg text-headline-lg text-on-surface mb-6 text-center">멤버 모집 시작 (2/2)</h1>
+            <div class="text-center p-12 bg-surface-container rounded-xl max-w-2xl mx-auto">
+                <p>여기에 모집 인원 및 역할 상세 설정 UI가 들어갑니다.</p>
+                <button onclick="navigate('dashboard')" class="mt-8 bg-secondary text-white px-8 py-3 rounded-full hover:bg-secondary/90">
+                    모집 등록 완료
+                </button>
+            </div>
+        </main>
+
+        <!-- ============================================== -->
+        <!-- 6. 키카드 결과                                 -->
+        <!-- ============================================== -->
+        <main id="page-keycard-result" class="page bg-surface text-on-surface min-h-[80vh] flex items-center justify-center relative">
+            <div class="relative z-20 w-full max-w-md mx-margin-mobile pt-16">
+                <!-- Key-Card UI -->
+                <div class="bg-surface-container-lowest rounded-xl shadow-lg border border-primary-fixed-dim/50 overflow-hidden flex flex-col">
+                    <div class="h-2 w-full bg-gradient-to-r from-primary-container to-secondary-container"></div>
+                    <div class="p-gutter flex flex-col items-center text-center space-y-stack-md">
+                        <div class="w-16 h-16 rounded-full bg-primary-container flex items-center justify-center mb-stack-sm shadow-[0_0_15px_rgba(233,213,255,0.5)]">
+                            <span class="material-symbols-outlined text-on-primary-container font-headline-lg" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                        </div>
+                        <div class="space-y-stack-sm w-full">
+                            <h2 class="font-headline-md text-on-surface">신청 완료!</h2>
+                            <p class="font-body-md text-on-surface-variant">디지털 키카드가 성공적으로 발급되었습니다.</p>
+                        </div>
+                        
+                        <!-- ID Area -->
+                        <div class="w-full bg-surface-container rounded-lg p-stack-md border border-outline-variant/30 flex flex-col items-center space-y-stack-sm my-stack-md">
+                            <span class="font-label-sm text-on-surface-variant uppercase tracking-widest">회원아이디 (Unique ID)</span>
+                            <div class="flex items-center justify-center w-full bg-surface-container-lowest py-3 px-4 rounded border border-outline-variant/50 shadow-inner">
+                                <code class="font-mono font-headline-sm text-primary tracking-tight">asjfho54995a8x99q2z</code>
+                            </div>
+                        </div>
+                        
+                        <button onclick="navigate('dashboard')" class="w-full py-4 rounded-lg bg-gradient-to-r from-primary to-secondary text-on-primary font-label-md flex items-center justify-center space-x-2 hover:opacity-90 active:scale-[0.98]">
+                            <span>홈으로 돌아가기</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <!-- ============================================== -->
+        <!-- 7. 팀 현황 목록                                -->
+        <!-- ============================================== -->
+        <main id="page-matching-status" class="page max-w-container-max mx-auto pt-24 px-margin-mobile md:px-gutter pb-32">
+            <div class="flex justify-between items-end mb-8">
+                <div>
+                    <h2 class="font-headline-lg text-primary">팀 매칭 현황</h2>
+                    <p class="text-on-surface-variant mt-2">나의 매칭 상태와 팀 목록을 확인하세요.</p>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                <aside class="lg:col-span-4 space-y-6">
+                    <div class="glass-card rounded-xl p-8 shadow-sm border-l-4 border-l-primary">
+                        <span class="inline-block px-3 py-1 rounded-full bg-primary-container text-on-primary-container font-label-sm mb-4">현재 상태</span>
+                        <h2 class="font-headline-md mb-6">나의 매칭 현황</h2>
+                        <div class="bg-surface-container-lowest rounded-lg border border-primary-container/30 p-5 flex flex-col gap-4">
+                            <h3 class="font-headline-sm">스타트업 멘토링 프로그램</h3>
+                            <div class="flex items-center gap-2 text-label-sm text-on-surface-variant bg-surface p-3 rounded border">
+                                <span class="material-symbols-outlined text-[18px]">info</span>
+                                <p>매칭 대기중입니다.</p>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+                
+                <section class="lg:col-span-8 space-y-4">
+                    <h2 class="font-headline-md text-on-surface mb-4">매칭 대기 중인 팀</h2>
+                    <!-- Card 1 -->
+                    <div class="glass-card rounded-xl p-6 shadow-sm border border-outline-variant/30 flex flex-col md:flex-row gap-6">
+                        <div class="w-20 h-20 rounded-xl bg-primary-container flex-shrink-0 flex items-center justify-center text-primary">
+                            <span class="material-symbols-outlined text-4xl">groups</span>
+                        </div>
+                        <div class="flex-grow">
+                            <h3 class="font-headline-sm mb-2">혁신적인 웹 서비스 기획팀</h3>
+                            <p class="text-on-surface-variant font-body-md line-clamp-2 mb-4">함께 혁신적인 웹 서비스를 만들 프론트엔드 개발자를 찾습니다.</p>
+                            <button class="px-6 py-2 brand-gradient-bg text-on-primary-fixed font-label-md rounded-xl hover:opacity-90 transition-all">멤버 가입 신청</button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+    </div>
+
+    <!-- Global BottomNavBar (Mobile Only) -->
+    <nav id="global-bottom-nav" class="md:hidden fixed bottom-0 w-full z-50 rounded-t-xl backdrop-blur-xl bg-surface/80 dark:bg-surface-container-low/80 shadow-[0px_-4px_20px_rgba(0,0,0,0.05)]">
+        <div class="flex justify-around items-center h-20 px-4 pb-safe w-full">
+            <a href="#" onclick="navigate('matching-step1')" class="nav-item flex flex-col items-center justify-center text-on-surface-variant px-6 py-1 hover:text-primary transition-all active:scale-90" data-target="matching">
+                <span class="material-symbols-outlined mb-1">person_add</span>
+                <span class="font-label-sm">매칭 신청</span>
+            </a>
+            <a href="#" onclick="navigate('recruitment-step1')" class="nav-item flex flex-col items-center justify-center text-on-surface-variant px-6 py-1 hover:text-primary transition-all active:scale-90" data-target="recruitment">
+                <span class="material-symbols-outlined mb-1">group_add</span>
+                <span class="font-label-sm">멤버 모집</span>
+            </a>
+            <a href="#" onclick="navigate('matching-status')" class="nav-item flex flex-col items-center justify-center text-on-surface-variant px-6 py-1 hover:text-primary transition-all active:scale-90" data-target="status">
+                <span class="material-symbols-outlined mb-1">assignment_turned_in</span>
+                <span class="font-label-sm">현황</span>
+            </a>
+        </div>
+    </nav>
+
+    <!-- SPA Navigation Script -->
+    <script>
+        // 초기 설정
+        const pages = document.querySelectorAll('.page');
+        const headerTitle = document.getElementById('header-title');
+        const headerIcon = document.getElementById('header-icon');
+        
+        function navigate(pageId) {
+            // 모든 페이지 숨기기
+            pages.forEach(p => {
+                p.classList.remove('active');
+                setTimeout(() => { if(!p.classList.contains('active')) p.style.display = 'none'; }, 300);
+            });
+            
+            // 대상 페이지 표시
+            const target = document.getElementById(`page-${pageId}`);
+            if(target) {
+                target.style.display = 'flex';
+                // 약간의 지연 후 opacity 적용 (트랜지션 효과)
+                setTimeout(() => target.classList.add('active'), 50);
+            }
+            
+            // 헤더 및 네비게이션 상태 업데이트 (간단한 예시)
+            updateHeaderUI(pageId);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        
+        function updateHeaderUI(pageId) {
+            // 하단 네비바 가시성 제어 (신청 폼 등에서는 숨기기)
+            const bottomNav = document.getElementById('global-bottom-nav');
+            if(pageId.includes('step') || pageId.includes('result')) {
+                bottomNav.style.transform = 'translateY(100%)';
+            } else {
+                bottomNav.style.transform = 'translateY(0)';
+            }
+            
+            // 헤더 텍스트 변경
+            if(pageId === 'dashboard') {
+                headerTitle.textContent = 'DSU My team';
+                headerIcon.textContent = 'group';
+            } else if(pageId.includes('matching-step')) {
+                headerTitle.textContent = '신청서';
+                headerIcon.textContent = 'arrow_back';
+            } else if(pageId.includes('recruitment-step')) {
+                headerTitle.textContent = '멤버 모집';
+                headerIcon.textContent = 'close';
+            } else if(pageId === 'matching-status') {
+                headerTitle.textContent = 'DUS 팀 현황 목록';
+                headerIcon.textContent = 'menu';
+            }
+        }
+    </script>
+</body>
+</html>

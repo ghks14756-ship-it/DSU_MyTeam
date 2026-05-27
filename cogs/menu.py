@@ -328,7 +328,6 @@ class MenuCog(commands.Cog):
             inline=False,
         )
         embed.set_footer(text="DSU My_team · 24h 운영 · 72시간 데이터 TTL")
-        embed.set_thumbnail(url="https://cdn.discordapp.com/emojis/🏫")
 
         await interaction.response.send_message(
             embed=embed,

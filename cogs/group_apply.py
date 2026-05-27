@@ -118,6 +118,80 @@ class GroupApplyCog(commands.Cog):
         embed.set_footer(text=f"총 {len(members)}명 | /그룹신청 으로 일괄 신청하세요")
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
+    @app_commands.command(name="그룹신청", description="[조장] 초대 코드로 묶인 그룹 인원을 매칭 대기열에 일괄 등록합니다")
+    @app_commands.describe(code="그룹 초대 코드")
+    async def group_apply_command(self, interaction: discord.Interaction, code: str) -> None:
+        code = code.strip().upper()
+        invite = await self.bot.db.get_group_invite(code)
+
+        if not invite:
+            await interaction.response.send_message("❌ 해당 코드의 그룹을 찾을 수 없습니다.", ephemeral=True)
+            return
+
+        if str(interaction.user.id) != str(invite["creator_id"]):
+            await interaction.response.send_message("❌ 그룹을 생성한 조장만 일괄 신청할 수 있습니다.", ephemeral=True)
+            return
+
+        if invite.get("is_used"):
+            await interaction.response.send_message("❌ 이미 일괄 신청이 완료된 초대 코드입니다.", ephemeral=True)
+            return
+
+        members = json.loads(invite["members"])
+        from datetime import datetime, timezone
+        from config import Config
+        now = datetime.now(timezone.utc)
+
+        # 1인 1신청 일괄 검증
+        if not Config.ALLOW_MULTIPLE_APPLICATIONS:
+            for uid in members:
+                async with self.bot.db._conn.execute(
+                    "SELECT id FROM applications WHERE discord_id = ? AND is_matched = 0 AND expires_at > ?",
+                    (uid, now.isoformat())
+                ) as cursor:
+                    if await cursor.fetchone():
+                        try:
+                            user = await self.bot.fetch_user(int(uid))
+                            name = user.display_name
+                        except:
+                            name = uid
+                        await interaction.response.send_message(
+                            f"❌ 그룹 멤버 중 이미 신청 내역이 존재하는 인원이 있습니다: {name}\n전원 1인 1신청 조건을 만족해야 합니다.", 
+                            ephemeral=True
+                        )
+                        return
+
+        class GroupApplyModal(discord.ui.Modal, title=f"그룹 일괄 신청 ({len(members)}명)"):
+            department = discord.ui.TextInput(label="대표 학과", placeholder="예) 컴퓨터공학과")
+            skill = discord.ui.TextInput(label="대표 특기 / 역할", placeholder="예) 프론트엔드/백엔드 혼합")
+
+            async def on_submit(self, modal_interaction: discord.Interaction):
+                await modal_interaction.response.defer(ephemeral=True, thinking=True)
+                for uid in members:
+                    try:
+                        u = await modal_interaction.client.fetch_user(int(uid))
+                        uname = u.display_name
+                    except:
+                        uname = f"유저_{uid[-4:]}"
+
+                    # db_manager의 create_application이 중복 검사를 하므로 안전하게 등록
+                    await modal_interaction.client.db.create_application(
+                        discord_id=uid,
+                        username=uname,
+                        student_id="그룹일괄",
+                        department=self.department.value,
+                        skill=self.skill.value,
+                        activity_id=invite["activity_id"],
+                        group_code=code
+                    )
+
+                # 코드 사용 처리
+                await modal_interaction.client.db._conn.execute("UPDATE group_invites SET is_used = 1 WHERE code = ?", (code,))
+                await modal_interaction.client.db._conn.commit()
+
+                await modal_interaction.followup.send(f"✅ 총 {len(members)}명의 그룹 멤버가 일괄 매칭 대기열에 등록되었습니다!", ephemeral=True)
+
+        await interaction.response.send_modal(GroupApplyModal())
+
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(GroupApplyCog(bot))

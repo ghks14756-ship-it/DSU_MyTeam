@@ -80,6 +80,22 @@ class DSUMyTeamBot(commands.Bot):
         synced = await self.tree.sync()
         log.info(f"✅ 슬래시 커맨드 동기화 완료: {len(synced)}개")
 
+        # 5. 웹 API 서버 구동 (aiohttp)
+        try:
+            from aiohttp import web
+            from api.routes import setup_api
+            
+            self.web_app = web.Application()
+            setup_api(self.web_app, self)
+            
+            self.runner = web.AppRunner(self.web_app)
+            await self.runner.setup()
+            self.site = web.TCPSite(self.runner, '0.0.0.0', 8080)
+            await self.site.start()
+            log.info("✅ 웹 API 서버(aiohttp) 구동 완료 (포트: 8080)")
+        except Exception as e:
+            log.error(f"❌ 웹 API 서버 구동 실패: {e}")
+
     async def _load_cogs(self) -> None:
         """cogs/ 디렉토리 내 모든 Cog를 자동 로드."""
         cog_dir = Path("cogs")
@@ -90,6 +106,7 @@ class DSUMyTeamBot(commands.Bot):
             "random_match",   # 랜덤 매칭
             "group_apply",    # 그룹 신청 (초대코드)
             "admin",          # /최신화 등 관리자 명령어
+            "auth",           # 고유 ID 인증
         ]
         for cog_name in cog_files:
             try:
@@ -115,6 +132,11 @@ class DSUMyTeamBot(commands.Bot):
 
     async def close(self) -> None:
         """봇 종료 시 정리."""
+        if hasattr(self, 'site') and self.site:
+            await self.site.stop()
+        if hasattr(self, 'runner') and self.runner:
+            await self.runner.cleanup()
+            
         if self.ttl_scheduler:
             self.ttl_scheduler.cancel()
         if self.db:

@@ -43,7 +43,7 @@ async def generate_match_report(
         import google.generativeai as genai
 
         genai.configure(api_key=Config.GEMINI_API_KEY)
-        model = genai.GenerativeModel("gemini-pro")
+        model = genai.GenerativeModel("gemini-1.5-flash")
 
         prompt = f"""
 당신은 대학교 팀 매칭 전문 AI 어시스턴트입니다.
@@ -171,23 +171,41 @@ class TeamRoomModal(discord.ui.Modal, title="🏠 팀 방 생성"):
         embed.add_field(name="분석 결과", value=report_text[:1020], inline=False)
         embed.set_footer(text=f"팀 ID: {team_id} · /채널생성 으로 채널을 개설하세요")
 
-        # 승인 버튼 View
-        view = ApproveView(team_id=team_id, applicants=applicants, max_mem=max_mem)
+        # 조장 픽업 View
+        view = TeamRoomPickView(team_id=team_id, applicants=applicants, max_mem=max_mem)
         await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
 
 # ─────────────────────────────────────────────
 #  승인 버튼 View
 # ─────────────────────────────────────────────
-class ApproveView(discord.ui.View):
+class TeamRoomPickView(discord.ui.View):
     def __init__(self, team_id: int, applicants: list[dict], max_mem: int):
         super().__init__(timeout=300)
         self.team_id = team_id
         self.applicants = applicants
         self.max_mem = max_mem
 
-    @discord.ui.button(label="✅ 상위 멤버 자동 초대 & 채널 생성", style=discord.ButtonStyle.success)
-    async def approve(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+        options = []
+        for app in applicants[:25]:
+            label = f"{app['username']} ({app['department']})"
+            desc = app.get("skill", "")[:50]
+            options.append(discord.SelectOption(label=label, value=str(app["discord_id"]), description=desc))
+
+        select_max = min(len(options), max_mem - 1)
+        if select_max > 0:
+            self.select_menu = discord.ui.Select(
+                placeholder=f"팀원을 선택하세요 (최대 {select_max}명, 랜덤 대기자 포함)",
+                min_values=1,
+                max_values=select_max,
+                options=options
+            )
+            self.select_menu.callback = self.select_callback
+            self.add_item(self.select_menu)
+        else:
+            self.add_item(discord.ui.Button(label="대기 중인 신청자가 없습니다.", disabled=True))
+
+    async def select_callback(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True, thinking=True)
         bot = interaction.client
         guild = interaction.guild
@@ -196,22 +214,34 @@ class ApproveView(discord.ui.View):
             await interaction.followup.send("❌ 서버 내에서만 사용할 수 있습니다.", ephemeral=True)
             return
 
-        # 채널 카테고리 가져오거나 생성
+        selected_ids = self.select_menu.values
+
+        # 1순위 랜덤 매칭 방어 (Lock/Check)
+        valid_apps = []
+        for discord_id in selected_ids:
+            app_data = await bot.db.get_application(discord_id)
+            if app_data and app_data["is_matched"] == 0:
+                valid_apps.append(app_data)
+            else:
+                await interaction.followup.send(
+                    "⚠️ 선택하신 멤버 중 방금 다른 팀(또는 랜덤 팀)에 매칭된 인원이 있습니다. 창을 닫고 다시 시도해 주세요.",
+                    ephemeral=True
+                )
+                return
+
+        # 채널 생성 로직
         category = discord.utils.get(guild.categories, name=Config.TEAM_CATEGORY_NAME)
         if category is None:
             category = await guild.create_category(Config.TEAM_CATEGORY_NAME)
 
-        # 상위 max_mem 명 선택 (DB 순 = 신청 순)
-        selected = self.applicants[: self.max_mem - 1]  # 조장 포함이므로 -1
         members_to_invite = []
-        for app in selected:
+        for app in valid_apps:
             try:
                 member = guild.get_member(int(app["discord_id"])) or await guild.fetch_member(int(app["discord_id"]))
                 members_to_invite.append(member)
             except Exception:
                 pass
 
-        # 권한 오버라이드 (초대된 유저만 접근)
         overwrites: dict[discord.Role | discord.Member, discord.PermissionOverwrite] = {
             guild.default_role: discord.PermissionOverwrite(view_channel=False),
             interaction.user: discord.PermissionOverwrite(view_channel=True, manage_channels=True),
@@ -219,24 +249,24 @@ class ApproveView(discord.ui.View):
         for m in members_to_invite:
             overwrites[m] = discord.PermissionOverwrite(view_channel=True)
 
-        # 팀 채널 이름
-        team_num = self.team_id
-        text_ch = await guild.create_text_channel(
-            f"{Config.TEAM_TEXT_CHANNEL_PREFIX}-{team_num}",
-            category=category,
-            overwrites=overwrites,
-        )
-        voice_ch = await guild.create_voice_channel(
-            f"{Config.TEAM_VOICE_CHANNEL_PREFIX}-{team_num}",
-            category=category,
-            overwrites=overwrites,
-        )
+        try:
+            text_ch = await guild.create_text_channel(
+                f"{Config.TEAM_TEXT_CHANNEL_PREFIX}-{self.team_id}",
+                category=category,
+                overwrites=overwrites,
+            )
+            voice_ch = await guild.create_voice_channel(
+                f"{Config.TEAM_VOICE_CHANNEL_PREFIX}-{self.team_id}",
+                category=category,
+                overwrites=overwrites,
+            )
+        except Exception as e:
+            await interaction.followup.send(f"❌ 채널 생성 실패 (권한 부족 등): {e}", ephemeral=True)
+            return
 
-        # DB 업데이트
         await bot.db.update_team_channels(self.team_id, str(text_ch.id), str(voice_ch.id))
 
-        # 매칭 완료 처리 & DM 전송
-        for app in selected:
+        for app in valid_apps:
             await bot.db.mark_matched(app["discord_id"], self.team_id, app.get("username"))
             try:
                 user = await bot.fetch_user(int(app["discord_id"]))
@@ -247,9 +277,12 @@ class ApproveView(discord.ui.View):
             except Exception:
                 pass
 
-        button.disabled = True
+        for item in self.children:
+            item.disabled = True
+        await interaction.message.edit(view=self)
+
         await interaction.followup.send(
-            f"✅ 채널 생성 완료!\n💬 {text_ch.mention}\n🔊 {voice_ch.mention}",
+            f"✅ 채널 생성 및 초대 완료!\n💬 {text_ch.mention}\n🔊 {voice_ch.mention}",
             ephemeral=True,
         )
         self.stop()

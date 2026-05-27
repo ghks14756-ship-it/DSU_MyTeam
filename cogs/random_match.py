@@ -126,6 +126,8 @@ class RandomMatchCog(commands.Cog):
                 try:
                     user = await self.bot.fetch_user(int(app["discord_id"]))
                     msg = f"🎉 **랜덤 팀 매칭이 완료되었습니다!** (팀 {idx})\n"
+                    if len(team) < team_size:
+                        msg += f"⚠️ 현재 대기 인원이 부족하여 목표 인원({team_size}명)보다 적은 인원으로 매칭되었습니다. 양해 부탁드립니다.\n"
                     if text_ch:
                         msg += f"💬 채팅방: {text_ch.mention}\n"
                     if voice_ch:

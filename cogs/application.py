@@ -451,4 +451,9 @@ class ApplicationCog(commands.Cog):
 
 
 async def setup(bot: commands.Bot) -> None:
-    await bot.add_cog(ApplicationCog(bot))
+    # [역할 분리] 웹 = 신청/모집, 디스코드 = 매칭 시스템
+    # 디스코드 내 /신청 명령어는 혼선 방지를 위해 비활성화됨.
+    # 복원이 필요한 경우 아래 주석을 해제하세요.
+    # await bot.add_cog(ApplicationCog(bot))
+    pass
+

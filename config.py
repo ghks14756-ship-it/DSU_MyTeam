@@ -19,8 +19,6 @@ class Config:
     # ── Google Sheets (선택 사항) ─────────────────
     GSHEET_CREDENTIALS_FILE: str = os.getenv("GSHEET_CREDENTIALS", "credentials.json")
     GSHEET_SPREADSHEET_ID: str = os.getenv("GSHEET_SPREADSHEET_ID", "")
-    GSHEET_WORKSHEET_NAME: str = os.getenv("GSHEET_WORKSHEET_NAME", "활동목록")
-
     # ── AI (Google Gemini) ────────────────────────
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
 
@@ -36,3 +34,7 @@ class Config:
     # ── 랜덤 매칭 ─────────────────────────────────
     DEFAULT_TEAM_SIZE: int = 4               # 기본 팀 인원
     DEADLINE_WARNING_HOURS: int = 6          # 마감 N시간 전 경고
+
+    # ── 테스트 모드 ───────────────────────────────
+    # TODO(테스트 종료 시 반드시 False로 변경할 것!)
+    ALLOW_MULTIPLE_APPLICATIONS: bool = True # 1인 1신청(중복 신청) 허용 여부 토글

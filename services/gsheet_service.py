@@ -3,28 +3,34 @@ services/gsheet_service.py
 구글 시트 API 연동 서비스
 
 수행 기능:
-  1. '활동목록' 탭에서 MYDEX 활동 데이터 로드
-  2. '신청현황' 탭에 유저 신청서 기록
-  3. '신청현황' 탭의 72시간 TTL 체크 및 자동 삭제/만료 로직
+  1. '활동_프로그램_관리' 탭에서 프로그램 데이터 로드/추가
+  2. '통합_사용자_관리', '매칭_대기_라인', '팀_관리_라인' 탭에 유저/팀 신청서 기록
+  3. '회원_정보' 탭 — 웹 회원가입/로그인/디스코드 연동 코드 관리 (내일 구현 예정)
+  4. '매칭_대기_라인' 탭에서 대기자 목록 조회 (fetch_applications)
 """
 
 import logging
 import asyncio
-from datetime import datetime, timezone, timedelta
-from typing import List, Dict, Any, Tuple
+import secrets
+import string
+from datetime import datetime, timezone
+from typing import List, Dict, Any
 
 log = logging.getLogger("DSUMyTeam.GSheet")
 
 
 class GoogleSheetService:
-    """구글 시트 DB 연동 및 TTL 관리 서비스."""
+    """구글 시트 DB 연동 서비스."""
 
     def __init__(self):
         from config import Config
         self.credentials_file = Config.GSHEET_CREDENTIALS_FILE
         self.spreadsheet_id = Config.GSHEET_SPREADSHEET_ID
-        self.worksheet_activities = "활동목록"
-        self.worksheet_applications = "신청현황"
+        self.worksheet_users = "통합_사용자_관리"
+        self.worksheet_waiting = "매칭_대기_라인"
+        self.worksheet_team_line = "팀_관리_라인"
+        self.worksheet_programs = "활동_프로그램_관리"
+        self.worksheet_members = "회원_정보"  # [신규] 웹 회원 테이블
 
     def _get_client(self):
         """gspread 클라이언트 생성 (동기)"""
@@ -40,210 +46,400 @@ class GoogleSheetService:
         )
         return gspread.authorize(creds)
 
-    # ── 활동 목록 로드 ──────────────────────────────────────────
-    async def fetch_activities(self) -> List[Dict[str, Any]]:
-        """구글 시트의 '활동목록' 탭을 읽어와 반환."""
-        if not self.spreadsheet_id or self.spreadsheet_id == "YOUR_SPREADSHEET_ID_HERE":
-            log.warning("GSHEET_SPREADSHEET_ID 미설정 -> 샘플 데이터 반환")
-            return self._sample_activities()
+    def _is_configured(self) -> bool:
+        """구글 시트 연동이 설정되어 있는지 확인."""
+        return bool(self.spreadsheet_id and self.spreadsheet_id != "YOUR_SPREADSHEET_ID_HERE")
 
+    # ══════════════════════════════════════════════════════════════
+    #  프로그램 (활동_프로그램_관리)
+    # ══════════════════════════════════════════════════════════════
+
+    async def get_programs(self) -> List[Dict[str, str]]:
+        """웹 캐러셀용 프로그램 목록 반환."""
+        if not self._is_configured():
+            return []
         try:
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             client = await loop.run_in_executor(None, self._get_client)
-            
+
             def _fetch():
-                sheet = client.open_by_key(self.spreadsheet_id).worksheet(self.worksheet_activities)
-                # 헤더가 2행에 있을 수 있으므로 head=2 지정
-                # 하지만 gspread의 get_all_records는 1행을 헤더로 봄. 
-                # 수동으로 처리 (2행을 헤더로 사용)
-                all_values = sheet.get_all_values()
-                if len(all_values) < 2: return []
-                
-                headers = all_values[1] # 2행 (인덱스 1)
-                data_rows = all_values[2:] # 3행부터 데이터
-                
-                res = []
-                for row in data_rows:
-                    item = {}
-                    for i, h in enumerate(headers):
-                        if i < len(row): item[h] = row[i]
-                    res.append(item)
-                return res
+                sheet = client.open_by_key(self.spreadsheet_id).worksheet(self.worksheet_programs)
+                return sheet.get_all_records()
 
-            rows = await loop.run_in_executor(None, _fetch)
-            
-            activities = []
-            for row in rows:
-                name = str(row.get("활동명", "")).strip()
-                if not name: continue
-                activities.append({
-                    "name": name,
-                    "description": str(row.get("설명", "")),
-                    "deadline": str(row.get("마감일", "")) or None,
-                    "max_members": int(row.get("최대인원", 0) or 0),
-                })
-            return activities
+            return await loop.run_in_executor(None, _fetch)
         except Exception as e:
-            log.error(f"활동 목록 로드 실패: {e}")
-            return self._sample_activities()
-
-    # ── 신청 목록 로드 (동기화용) ──────────────────────────────────
-    async def fetch_applications(self) -> List[Dict[str, Any]]:
-        """구글 시트의 '신청현황' 탭을 읽어와 반환."""
-        if not self.spreadsheet_id or self.spreadsheet_id == "YOUR_SPREADSHEET_ID_HERE":
+            log.error(f"[get_programs] 실패: {e}")
             return []
 
-        try:
-            loop = asyncio.get_event_loop()
-            client = await loop.run_in_executor(None, self._get_client)
-            
-            def _fetch():
-                sheet = client.open_by_key(self.spreadsheet_id).worksheet(self.worksheet_applications)
-                all_values = sheet.get_all_values()
-                if len(all_values) < 2: return []
-                
-                headers = all_values[1] # 2행 (인덱스 1)
-                data_rows = all_values[2:] # 3행부터 데이터
-                
-                res = []
-                for row in data_rows:
-                    item = {}
-                    for i, h in enumerate(headers):
-                        if i < len(row): item[h.strip()] = row[i]
-                    res.append(item)
-                return res
-
-            rows = await loop.run_in_executor(None, _fetch)
-            
-            applications = []
-            for row in rows:
-                discord_id = str(row.get("디스코드ID", "")).strip()
-                username = str(row.get("이름", "")).strip()
-                if not discord_id or not username: continue
-                
-                # '희망 활동' 또는 '활동명' 열을 매핑
-                activity_name = str(row.get("희망 활동", row.get("활동명", ""))).strip()
-                
-                applications.append({
-                    "discord_id": discord_id,
-                    "username": username,
-                    "student_id": str(row.get("학번", "")).strip(),
-                    "department": str(row.get("학과", "")).strip(),
-                    "skill": str(row.get("특기", row.get("특기/역할", ""))).strip(),
-                    "activity_name": activity_name,
-                    "applied_at": str(row.get("신청시간", "")).strip(),
-                    "expires_at": str(row.get("만료시간", "")).strip(),
-                    "status": str(row.get("상태", "")).strip(),
-                })
-            return applications
-        except Exception as e:
-            log.error(f"신청 목록 로드 실패: {e}")
-            return []
-
-    # ── 신청서 기록 ──────────────────────────────────────────
-    async def record_application(self, data: Dict[str, Any]) -> bool:
+    async def add_program(self, data: Dict[str, str]) -> bool:
         """
-        '신청현황' 탭에 새 신청서 행 추가. (B열부터 기록을 위해 A열은 비움 없이 바로 시작)
-        형식: [B:신청시간, C:디스코드ID, D:이름, E:학번, F:학과, G:특기, H:만료시간, I:상태]
-        주의: 시트 자체가 B열부터 데이터가 시작되는 구조이므로, append_row 시 주의가 필요.
-        유저가 시트 전체를 B열 시작으로 맞췄으므로, gspread가 A열을 건너뛸 수 있도록 
-        데이터 앞에 빈 문자열 하나만 유지하거나, 특정 범위를 지정해야 함.
-        
-        사용자 피드백에 따라 빈 문자열 하나일 때 C열로 밀린다면, 빈 문자열 없이 처리해보고
-        그래도 밀린다면 범위를 명시하겠습니다. 일단 빈 문자열을 제거합니다.
+        [신규] 관리자 /최신화 Modal → 활동_프로그램_관리 탭에 신규 행 추가.
         """
-        if not self.spreadsheet_id or self.spreadsheet_id == "YOUR_SPREADSHEET_ID_HERE":
+        if not self._is_configured():
             return False
-
         try:
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             client = await loop.run_in_executor(None, self._get_client)
 
-            # 데이터 준비
-            now = datetime.now(timezone.utc)
-            expires = now + timedelta(hours=72)
-            
-            row_data = [
-                now.isoformat(),
-                str(data['discord_id']),
-                data['username'],
-                data['student_id'],
-                data['department'],
-                data['skill'],
-                expires.isoformat(),
-                "대기"
+            headers = [
+                "프로그램 내용", "신청일시", "신청형태", "운영일시", "만족도 실시기간",
+                "최대학습포인트", "신청대상", "신청구분", "프로그램 담당자", "첨부파일", "전달사항"
             ]
+            row = [data.get(h, "") for h in headers]
 
             def _append():
-                sheet = client.open_by_key(self.spreadsheet_id).worksheet(self.worksheet_applications)
-                # B열부터 시작하게 하기 위해 range를 지정하거나, 
-                # append_row의 첫 요소를 "" 로 두어 A열을 비우는 것이 표준입니다.
-                # 하지만 C열로 밀렸다면, 시트 자체가 A열이 숨겨져 있거나 다른 설정이 있을 수 있습니다.
-                # 여기서는 빈 문자열 하나를 추가하여 [A="", B=time, ...] 가 되도록 하되,
-                # 만약 이전에도 이랬는데 C로 밀렸다면 이번엔 빈 문자열 없이 시도해 보겠습니다.
-                sheet.append_row(row_data, table_range="B2") 
+                sheet = client.open_by_key(self.spreadsheet_id).worksheet(self.worksheet_programs)
+                sheet.append_row(row)
                 return True
 
             return await loop.run_in_executor(None, _append)
         except Exception as e:
-            log.error(f"신청서 시트 기록 실패: {e}")
+            log.error(f"[add_program] 실패: {e}")
             return False
 
-    # ── 72h TTL 스캔 및 처리 ─────────────────────────────────────
-    async def process_ttl_check(self) -> List[Tuple[str, str]]:
+    async def fetch_activities(self) -> List[Dict[str, Any]]:
         """
-        만료된 행을 찾아 삭제하고, 해당 유저 ID와 이름을 반환 (DM 알림용).
-        헤더가 2행인 구조 고려.
+        [신규] 활동_프로그램_관리 탭 → SQLite activities 테이블 upsert용 데이터 반환.
+        /최신화 명령어 (구버전 방향) 또는 수동 동기화 시 사용.
         """
-        if not self.spreadsheet_id or self.spreadsheet_id == "YOUR_SPREADSHEET_ID_HERE":
+        if not self._is_configured():
+            return []
+        try:
+            programs = await self.get_programs()
+            result = []
+            for p in programs:
+                name = p.get("프로그램 내용", "").strip()
+                if not name:
+                    continue
+                result.append({
+                    "name": name,
+                    "description": p.get("전달사항", ""),
+                    "deadline": p.get("신청일시", ""),
+                    "max_members": int(p.get("최대학습포인트", 0) or 0),
+                })
+            return result
+        except Exception as e:
+            log.error(f"[fetch_activities] 실패: {e}")
             return []
 
-        expired_users = []
+    # ══════════════════════════════════════════════════════════════
+    #  매칭 대기자 (매칭_대기_라인)
+    # ══════════════════════════════════════════════════════════════
+
+    async def fetch_applications(self) -> List[Dict[str, Any]]:
+        """
+        [신규] 매칭_대기_라인 탭의 전체 대기자 목록 반환.
+        /대기목록 명령어에서 사용.
+        """
+        if not self._is_configured():
+            return []
         try:
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             client = await loop.run_in_executor(None, self._get_client)
 
-            def _check_and_delete():
-                sheet = client.open_by_key(self.spreadsheet_id).worksheet(self.worksheet_applications)
-                all_values = sheet.get_all_values()
-                if len(all_values) < 3: return [] # 데이터가 없음 (헤더 2행 + 데이터 0행)
-                
-                headers = all_values[1]
-                now = datetime.now(timezone.utc)
-                
-                rows_to_delete = []
-                # 3행(인덱스 2)부터 실제 데이터
-                for i in range(2, len(all_values)):
-                    row = all_values[i]
-                    try:
-                        # 헤더 위치 기반으로 데이터 추출
-                        # B열(신청시간)은 인덱스 1, H열(만료시간)은 인덱스 7
-                        expire_str = row[7] if len(row) > 7 else None
-                        if not expire_str: continue
-                        
-                        expires = datetime.fromisoformat(expire_str)
-                        if now > expires:
-                            # 만료됨
-                            discord_id = row[2] if len(row) > 2 else "알수없음"
-                            username = row[3] if len(row) > 3 else "알수없음"
-                            expired_users.append((str(discord_id), username))
-                            rows_to_delete.append(i + 1) # 1-based sheet row
-                    except Exception:
-                        continue
-                
-                # 삭제 (역순)
-                for row_idx in sorted(rows_to_delete, reverse=True):
-                    sheet.delete_rows(row_idx)
-                
-                return expired_users
+            def _fetch():
+                sheet = client.open_by_key(self.spreadsheet_id).worksheet(self.worksheet_waiting)
+                return sheet.get_all_records()
 
-            return await loop.run_in_executor(None, _check_and_delete)
+            records = await loop.run_in_executor(None, _fetch)
+            # Match_Status가 '대기'인 항목만 반환
+            return [r for r in records if r.get("Match_Status", "") == "대기"]
         except Exception as e:
-            log.error(f"TTL 시트 체크 실패: {e}")
+            log.error(f"[fetch_applications] 실패: {e}")
             return []
 
-    def _sample_activities(self) -> List[Dict[str, Any]]:
-        return [
-            {"name": "캡스톤디자인 A반", "description": "졸업작품 팀 구성", "deadline": "2025-09-30", "max_members": 4},
-            {"name": "창업경진대회", "description": "교내 스타트업 아이디어 공모전", "deadline": "2025-10-15", "max_members": 5},
-        ]
+    async def record_application(self, data: Dict[str, Any]) -> bool:
+        """개인 매칭 신청 → 통합_사용자_관리 + 매칭_대기_라인 시트 기록."""
+        if not self._is_configured():
+            return False
+
+        try:
+            loop = asyncio.get_running_loop()
+            client = await loop.run_in_executor(None, self._get_client)
+
+            now = datetime.now(timezone.utc).isoformat()
+
+            user_row = [
+                data.get('unique_id', ''),
+                "대기자",
+                data.get('discord_id', ''),
+                data.get('auth_status', '미인증'),
+                data.get('username', ''),
+                data.get('student_id', ''),
+                data.get('department', ''),
+                data.get('skill', ''),
+                data.get('program', '미정'),
+                now
+            ]
+
+            waiting_row = [
+                data.get('unique_id', ''),
+                data.get('username', ''),
+                data.get('department', ''),
+                data.get('skill', ''),
+                data.get('condition_1', ''),
+                data.get('condition_2', ''),
+                data.get('condition_3', ''),
+                data.get('program', '미정'),
+                data.get('match_status', '대기'),
+                now,
+                data.get('weekly_schedule', ''),   # [신규] JSON 직렬화 시간표
+                data.get('contact', ''),            # [신규] 연락수단
+            ]
+
+            def _append():
+                doc = client.open_by_key(self.spreadsheet_id)
+                ws_users = doc.worksheet(self.worksheet_users)
+                ws_waiting = doc.worksheet(self.worksheet_waiting)
+                ws_users.append_row(user_row)
+                ws_waiting.append_row(waiting_row)
+                return True
+
+            return await loop.run_in_executor(None, _append)
+        except Exception as e:
+            log.error(f"[record_application] 실패: {e}")
+            return False
+
+    async def record_recruitment(self, data: Dict[str, Any]) -> bool:
+        """팀 모집 등록 → 통합_사용자_관리 + 팀_관리_라인 시트 기록."""
+        if not self._is_configured():
+            return False
+
+        try:
+            loop = asyncio.get_running_loop()
+            client = await loop.run_in_executor(None, self._get_client)
+
+            now = datetime.now(timezone.utc).isoformat()
+
+            user_row = [
+                data.get('leader_unique_id', ''),
+                "팀장",
+                "",
+                "미인증",
+                data.get('leader_name', '웹 조장 유저'),
+                data.get('leader_student_id', '0000000'),
+                data.get('department', ''),
+                "팀장",
+                data.get('program', '미정'),
+                now
+            ]
+
+            team_row = [
+                data.get('team_id', ''),
+                data.get('leader_unique_id', ''),
+                data.get('leader_name', '웹 조장 유저'),
+                data.get('department', ''),
+                data.get('program', ''),
+                data.get('summary', ''),
+                data.get('description', ''),
+                1,
+                data.get('target_members', 4),
+                data.get('team_status', '모집중'),
+                now
+            ]
+
+            def _append():
+                doc = client.open_by_key(self.spreadsheet_id)
+                ws_users = doc.worksheet(self.worksheet_users)
+                ws_team = doc.worksheet(self.worksheet_team_line)
+                ws_users.append_row(user_row)
+                ws_team.append_row(team_row)
+                return True
+
+            return await loop.run_in_executor(None, _append)
+        except Exception as e:
+            log.error(f"[record_recruitment] 실패: {e}")
+            return False
+
+    # ══════════════════════════════════════════════════════════════
+    #  팀 목록 (팀_관리_라인)
+    # ══════════════════════════════════════════════════════════════
+
+    async def get_teams(self) -> List[Dict[str, Any]]:
+        """현황 페이지용 팀 목록 반환."""
+        try:
+            loop = asyncio.get_running_loop()
+            client = await loop.run_in_executor(None, self._get_client)
+            if not client:
+                return []
+
+            def _fetch():
+                doc = client.open_by_key(self.spreadsheet_id)
+                ws = doc.worksheet(self.worksheet_team_line)
+                return ws.get_all_records()
+
+            return await loop.run_in_executor(None, _fetch)
+        except Exception as e:
+            log.error(f"[get_teams] 실패: {e}")
+            return []
+
+    # ══════════════════════════════════════════════════════════════
+    #  인증 업데이트 (통합_사용자_관리)
+    # ══════════════════════════════════════════════════════════════
+
+    async def update_auth_status(self, unique_id: str, discord_id: str) -> bool:
+        """디스코드 /인증 완료 시 통합_사용자_관리의 Discord_ID와 Auth_Status 업데이트."""
+        if not self._is_configured():
+            return False
+        try:
+            loop = asyncio.get_running_loop()
+            client = await loop.run_in_executor(None, self._get_client)
+
+            def _update():
+                sheet = client.open_by_key(self.spreadsheet_id).worksheet(self.worksheet_users)
+                all_values = sheet.get_all_values()
+                if len(all_values) < 2:
+                    return False
+                for idx, row in enumerate(all_values):
+                    if row and str(row[0]).strip() == unique_id:
+                        row_num = idx + 1
+                        sheet.update_cell(row_num, 3, discord_id)   # C열: Discord_ID
+                        sheet.update_cell(row_num, 4, "인증완료")   # D열: Auth_Status
+                        return True
+                return False
+
+            return await loop.run_in_executor(None, _update)
+        except Exception as e:
+            log.error(f"[update_auth_status] 실패: {e}")
+            return False
+
+    # ══════════════════════════════════════════════════════════════
+    #  회원 시스템 (회원_정보) — 내일 구현 예정
+    # ══════════════════════════════════════════════════════════════
+
+    async def find_unique_id(self, unique_id: str) -> Dict[str, Any] | None:
+        """
+        [TODO: 내일 구현]
+        통합_사용자_관리에서 unique_id가 존재하는지 확인.
+        회원가입 시 발급된 인증키 유효성 검증에 사용.
+        """
+        if not self._is_configured():
+            return None
+        try:
+            loop = asyncio.get_running_loop()
+            client = await loop.run_in_executor(None, self._get_client)
+
+            def _find():
+                sheet = client.open_by_key(self.spreadsheet_id).worksheet(self.worksheet_users)
+                records = sheet.get_all_records()
+                for r in records:
+                    if str(r.get("Unique_ID", "")).strip() == unique_id:
+                        return r
+                return None
+
+            return await loop.run_in_executor(None, _find)
+        except Exception as e:
+            log.error(f"[find_unique_id] 실패: {e}")
+            return None
+
+    async def register_member(self, data: Dict[str, Any]) -> bool:
+        """
+        [TODO: 내일 구현]
+        회원_정보 탭에 신규 회원 등록.
+        data 키: web_id, nickname, unique_id, 가입일자
+        """
+        if not self._is_configured():
+            return False
+        try:
+            loop = asyncio.get_running_loop()
+            client = await loop.run_in_executor(None, self._get_client)
+
+            now = datetime.now(timezone.utc).isoformat()
+            row = [
+                data.get('web_id', ''),
+                data.get('nickname', ''),
+                data.get('unique_id', ''),
+                '',        # Discord_ID (인증 전 비어있음)
+                '',        # 연동_코드 (생성 전 비어있음)
+                '미인증',
+                data.get('가입일자', now),
+            ]
+
+            def _append():
+                sheet = client.open_by_key(self.spreadsheet_id).worksheet(self.worksheet_members)
+                sheet.append_row(row)
+                return True
+
+            return await loop.run_in_executor(None, _append)
+        except Exception as e:
+            log.error(f"[register_member] 실패: {e}")
+            return False
+
+    async def get_member_by_id(self, web_id: str) -> Dict[str, Any] | None:
+        """
+        [TODO: 내일 구현]
+        Web_ID로 회원_정보 탭 조회 → 로그인 검증에 사용.
+        """
+        if not self._is_configured():
+            return None
+        try:
+            loop = asyncio.get_running_loop()
+            client = await loop.run_in_executor(None, self._get_client)
+
+            def _find():
+                sheet = client.open_by_key(self.spreadsheet_id).worksheet(self.worksheet_members)
+                records = sheet.get_all_records()
+                for r in records:
+                    if str(r.get("Web_ID", "")).strip() == web_id:
+                        return r
+                return None
+
+            return await loop.run_in_executor(None, _find)
+        except Exception as e:
+            log.error(f"[get_member_by_id] 실패: {e}")
+            return None
+
+    async def get_member_by_unique_id(self, unique_id: str) -> Dict[str, Any] | None:
+        """
+        [TODO: 내일 구현]
+        Unique_ID로 회원_정보 탭 조회 → 인증키 로그인 검증에 사용.
+        """
+        if not self._is_configured():
+            return None
+        try:
+            loop = asyncio.get_running_loop()
+            client = await loop.run_in_executor(None, self._get_client)
+
+            def _find():
+                sheet = client.open_by_key(self.spreadsheet_id).worksheet(self.worksheet_members)
+                records = sheet.get_all_records()
+                for r in records:
+                    if str(r.get("Unique_ID", "")).strip() == unique_id:
+                        return r
+                return None
+
+            return await loop.run_in_executor(None, _find)
+        except Exception as e:
+            log.error(f"[get_member_by_unique_id] 실패: {e}")
+            return None
+
+    async def get_user_status(self, unique_id: str) -> Dict[str, Any]:
+        """
+        [TODO: 내일 구현]
+        unique_id 기반 매칭 진행 3단계 상태 반환.
+
+        반환 형식:
+        {
+            "stage": 1|2|3,
+            "label": "대기 중" | "매칭 완료" | "팀 결성",
+            "detail": "...",
+            "team_info": {...} | None
+        }
+
+        판단 기준:
+        - 매칭_대기_라인에 있고 Match_Status == "대기"  → 1단계
+        - 매칭_대기_라인에 있고 Match_Status == "매칭완료" → 2단계
+        - 팀_관리_라인에 있고 Team_Status == "결성완료" → 3단계
+        """
+        return {"stage": 0, "label": "미신청", "detail": "신청 내역이 없습니다.", "team_info": None}
+
+    async def generate_link_code(self, unique_id: str) -> str | None:
+        """
+        [TODO: 내일 구현]
+        디스코드 연동용 1회용 코드 생성 (예: A7X9-B2) 후 회원_정보 탭에 저장.
+        반환: 생성된 코드 문자열 또는 None(실패)
+        """
+        chars = string.ascii_uppercase + string.digits
+        code = ''.join(secrets.choice(chars) for _ in range(6))
+        # TODO: 회원_정보 탭에서 unique_id 행 찾아 연동_코드 컬럼 업데이트
+        return code

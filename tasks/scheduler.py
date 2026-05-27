@@ -51,14 +51,7 @@ class TTLScheduler:
                 await self.bot.db.delete_application(record["discord_id"])
                 log.info(f"  ✂️  DB 만료 삭제: {record['username']} ({record['discord_id']})")
 
-        # 2. 구글 시트 만료 체크
-        if self.bot.gsheet:
-            expired_sheet_users = await self.bot.gsheet.process_ttl_check()
-            for discord_id, username in expired_sheet_users:
-                # 시트에서 만료된 경우 간단한 레코드 객체 생성하여 DM 전송
-                dummy_record = {"username": username, "department": "시트 데이터", "skill": "알 수 없음"}
-                await self._send_expiry_dm(discord_id, dummy_record)
-                log.info(f"  ✂️  시트 만료 삭제: {username} ({discord_id})")
+        # 구글 시트 TTL 체크는 현재 미구현 (SQLite 기반 TTL만 운용)
 
     # ── DM 알림 ───────────────────────────────────────────────────
     async def _send_expiry_dm(self, discord_id: str, record: dict) -> None:

@@ -110,11 +110,22 @@ class DatabaseManager:
         group_code: str | None = None,
     ) -> dict:
         """
-        신청 데이터를 DB에 저장.
-        테스트를 위해 중복 신청이 가능하도록 INSERT만 수행.
+        신청 데이터를 DB에 저장 (1인 1신청 중복 방지 로직 포함).
         """
         from datetime import timedelta
         now = datetime.now(timezone.utc)
+        from config import Config
+
+        # 1인 1신청 검증 (is_matched = 0 이고 만료되지 않은 내역이 있는지 확인)
+        if not Config.ALLOW_MULTIPLE_APPLICATIONS:
+            async with self._conn.execute(
+                "SELECT id FROM applications WHERE discord_id = ? AND is_matched = 0 AND expires_at > ?",
+                (discord_id, now.isoformat())
+            ) as cursor:
+                existing = await cursor.fetchone()
+                if existing:
+                    raise ValueError("이미 대기 중인 신청 내역이 존재합니다.")
+
         expires = now + timedelta(hours=72)
 
         await self._conn.execute("""

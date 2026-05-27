@@ -309,7 +309,6 @@ class GoogleSheetService:
 
     async def find_unique_id(self, unique_id: str) -> Dict[str, Any] | None:
         """
-        [TODO: 내일 구현]
         통합_사용자_관리에서 unique_id가 존재하는지 확인.
         회원가입 시 발급된 인증키 유효성 검증에 사용.
         """
@@ -334,7 +333,6 @@ class GoogleSheetService:
 
     async def register_member(self, data: Dict[str, Any]) -> bool:
         """
-        [TODO: 내일 구현]
         회원_정보 탭에 신규 회원 등록.
         data 키: web_id, nickname, unique_id, 가입일자
         """
@@ -367,7 +365,6 @@ class GoogleSheetService:
 
     async def get_member_by_id(self, web_id: str) -> Dict[str, Any] | None:
         """
-        [TODO: 내일 구현]
         Web_ID로 회원_정보 탭 조회 → 로그인 검증에 사용.
         """
         if not self._is_configured():
@@ -391,7 +388,6 @@ class GoogleSheetService:
 
     async def get_member_by_unique_id(self, unique_id: str) -> Dict[str, Any] | None:
         """
-        [TODO: 내일 구현]
         Unique_ID로 회원_정보 탭 조회 → 인증키 로그인 검증에 사용.
         """
         if not self._is_configured():
@@ -415,9 +411,8 @@ class GoogleSheetService:
 
     async def get_user_status(self, unique_id: str) -> Dict[str, Any]:
         """
-        [TODO: 내일 구현]
         unique_id 기반 매칭 진행 3단계 상태 반환.
-
+        
         반환 형식:
         {
             "stage": 1|2|3,
@@ -425,21 +420,86 @@ class GoogleSheetService:
             "detail": "...",
             "team_info": {...} | None
         }
-
-        판단 기준:
-        - 매칭_대기_라인에 있고 Match_Status == "대기"  → 1단계
-        - 매칭_대기_라인에 있고 Match_Status == "매칭완료" → 2단계
-        - 팀_관리_라인에 있고 Team_Status == "결성완료" → 3단계
         """
-        return {"stage": 0, "label": "미신청", "detail": "신청 내역이 없습니다.", "team_info": None}
+        if not self._is_configured():
+            return {"stage": 0, "label": "미신청", "detail": "시트 설정 오류", "team_info": None}
+            
+        try:
+            loop = asyncio.get_running_loop()
+            client = await loop.run_in_executor(None, self._get_client)
+            
+            def _check():
+                doc = client.open_by_key(self.spreadsheet_id)
+                # 1, 2단계: 매칭 대기 라인 확인
+                ws_wait = doc.worksheet(self.worksheet_waiting)
+                wait_records = ws_wait.get_all_records()
+                user_wait = next((r for r in wait_records if str(r.get("Unique_ID", "")).strip() == unique_id), None)
+                
+                # 3단계: 팀 관리 라인 확인
+                ws_team = doc.worksheet(self.worksheet_team_line)
+                team_records = ws_team.get_all_records()
+                user_team = next((r for r in team_records if str(r.get("Leader_Unique_ID", "")).strip() == unique_id), None)
+
+                if user_team and user_team.get("Team_Status", "") == "결성완료":
+                    return {
+                        "stage": 3,
+                        "label": "🎉 팀 결성",
+                        "detail": f"팀 '{user_team.get('Team_ID')}' 결성 완료",
+                        "team_info": user_team
+                    }
+                elif user_wait:
+                    status = user_wait.get("Match_Status", "")
+                    if status == "매칭완료":
+                        return {
+                            "stage": 2,
+                            "label": "✅ 매칭 완료",
+                            "detail": "팀에 배정되었습니다. 팀장의 초대를 기다리세요.",
+                            "team_info": None
+                        }
+                    else:
+                        return {
+                            "stage": 1,
+                            "label": "🕐 대기 중",
+                            "detail": "조건에 맞는 팀을 찾고 있습니다.",
+                            "team_info": None
+                        }
+                return {"stage": 0, "label": "미신청", "detail": "신청 내역이 없습니다.", "team_info": None}
+
+            return await loop.run_in_executor(None, _check)
+        except Exception as e:
+            log.error(f"[get_user_status] 실패: {e}")
+            return {"stage": 0, "label": "조회 실패", "detail": "서버 오류", "team_info": None}
 
     async def generate_link_code(self, unique_id: str) -> str | None:
         """
-        [TODO: 내일 구현]
         디스코드 연동용 1회용 코드 생성 (예: A7X9-B2) 후 회원_정보 탭에 저장.
         반환: 생성된 코드 문자열 또는 None(실패)
         """
+        if not self._is_configured():
+            return None
+            
         chars = string.ascii_uppercase + string.digits
         code = ''.join(secrets.choice(chars) for _ in range(6))
-        # TODO: 회원_정보 탭에서 unique_id 행 찾아 연동_코드 컬럼 업데이트
-        return code
+        
+        try:
+            loop = asyncio.get_running_loop()
+            client = await loop.run_in_executor(None, self._get_client)
+
+            def _update():
+                sheet = client.open_by_key(self.spreadsheet_id).worksheet(self.worksheet_members)
+                all_values = sheet.get_all_values()
+                if len(all_values) < 2:
+                    return False
+                for idx, row in enumerate(all_values):
+                    # Unique_ID는 C열 (인덱스 2)
+                    if len(row) > 2 and str(row[2]).strip() == unique_id:
+                        row_num = idx + 1
+                        sheet.update_cell(row_num, 5, code)   # E열: 연동_코드
+                        return True
+                return False
+
+            success = await loop.run_in_executor(None, _update)
+            return code if success else None
+        except Exception as e:
+            log.error(f"[generate_link_code] 실패: {e}")
+            return None

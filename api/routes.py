@@ -16,11 +16,15 @@ def setup_api(app: web.Application, bot):
 @routes.options('/api/apply')
 @routes.options('/api/create_team')
 @routes.options('/api/teams')
+@routes.options('/api/signup')
+@routes.options('/api/login')
+@routes.options('/api/my-status')
+@routes.options('/api/generate-link-code')
 async def options_handler(request):
     """CORS 처리"""
     return web.Response(headers={
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type',
     })
 
@@ -43,7 +47,6 @@ async def api_teams(request: web.Request):
     bot = request.app['bot']
     try:
         teams = await bot.gsheet.get_teams()
-        # Filter for active teams if needed, but for now return all
         return add_cors_headers(web.json_response({"success": True, "data": teams}))
     except Exception as e:
         log.error(f"팀 목록 로드 실패: {e}")
@@ -51,45 +54,31 @@ async def api_teams(request: web.Request):
 
 @routes.post('/api/apply')
 async def api_apply(request: web.Request):
-    """
-    구간 1: 매칭 신청 (웹 -> 봇/시트)
-    """
     bot = request.app['bot']
     
     try:
         data = await request.json()
         log.info(f"웹 매칭 신청 수신: {data}")
         
-        # 1. 고유 ID 발급 (실전 라이선스 키 형태: DUS-XXXX-XXXX-XXXX-XXXX)
         raw_uuid = str(uuid.uuid4()).replace("-", "").upper()
         unique_id = f"DUS-{raw_uuid[0:4]}-{raw_uuid[4:8]}-{raw_uuid[8:12]}-{raw_uuid[12:16]}"
         
-        # 2. 로컬 DB에 기록 (Discord ID는 아직 미인증 상태이므로 빈 값 대신 Unique_ID를 임시로 사용하거나 특정 Prefix 사용)
-        # Auth_Status = '미인증' 상태로 applications 테이블에 넣으려면, db_manager 스키마 변경이 필요할 수 있으나
-        # 현재는 디스코드 ID가 없으므로 discord_id 칼럼에 'WEB_' + unique_id 형태로 임시 저장하고, 나중에 인증 시 업데이트.
         temp_discord_id = f"WEB_{unique_id}"
         
-        # DB 저장 (1인 1신청 검사는 아직 디스코드 ID가 없어서 웹 단계에서는 패스, 디코 연동 시점에 검사함)
-        await bot.db._conn.execute("""
-            INSERT INTO applications 
-            (discord_id, username, student_id, department, skill, activity_id, is_matched, applied_at, expires_at)
-            VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)
-        """, (
-            temp_discord_id,
-            data.get('name', '웹 유저'),
-            data.get('student_id', '0000000'),
-            data.get('department', '미정'),
-            data.get('skill', '특기 없음'),
-            1, # 임시 활동 ID
-            datetime.now(timezone.utc).isoformat(),
-            "2099-12-31T23:59:59" # 임시 무제한 만료 (인증 시 72h 부여)
-        ))
-        await bot.db._conn.commit()
+        # 1인 1신청 중복 예외가 나더라도 임시 discord_id라 충돌 안날 것임
+        await bot.db.create_application(
+            discord_id=temp_discord_id,
+            username=data.get('name', '웹 유저'),
+            student_id=data.get('student_id', '0000000'),
+            department=data.get('department', '미정'),
+            skill=data.get('skill', '특기 없음'),
+            activity_id=1,
+            group_code=None
+        )
 
-        # 3. 구글 시트 저장
         sheet_data = {
             "unique_id": unique_id,
-            "discord_id": "", # 미인증
+            "discord_id": "", 
             "auth_status": "미인증",
             "username": data.get('name', '웹 유저'),
             "student_id": data.get('student_id', '0000000'),
@@ -98,7 +87,9 @@ async def api_apply(request: web.Request):
             "condition_1": data.get('condition_1', ''),
             "condition_2": data.get('condition_2', ''),
             "condition_3": data.get('condition_3', ''),
-            "match_status": "대기"
+            "match_status": "대기",
+            "weekly_schedule": data.get('weekly_schedule', ''),
+            "contact": data.get('contact', '')
         }
         await bot.gsheet.record_application(sheet_data)
         
@@ -113,9 +104,6 @@ async def api_apply(request: web.Request):
 
 @routes.post('/api/create_team')
 async def api_create_team(request: web.Request):
-    """
-    구간 2: 멤버 모집/구인 신청 (웹 -> 봇/시트)
-    """
     bot = request.app['bot']
     
     try:
@@ -125,31 +113,23 @@ async def api_create_team(request: web.Request):
         raw_uuid = str(uuid.uuid4()).replace("-", "").upper()
         team_id = f"TEAM-{raw_uuid[0:4]}-{raw_uuid[4:8]}-{raw_uuid[8:12]}-{raw_uuid[12:16]}"
         
-        # 조장이 디스코드에서 /인증 TEAM-XXXX 로 인증할 수 있도록 임시 신청 내역(applications) 생성
         temp_discord_id = f"WEB_{team_id}"
         leader_name = data.get('leader_name', '웹 조장 유저')
         leader_student_id = data.get('leader_student_id', '0000000')
         
-        await bot.db._conn.execute("""
-            INSERT INTO applications 
-            (discord_id, username, student_id, department, skill, activity_id, is_matched, applied_at, expires_at)
-            VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)
-        """, (
-            temp_discord_id,
-            leader_name,
-            leader_student_id,
-            data.get('department', '미정'),
-            "팀장",
-            1,
-            datetime.now(timezone.utc).isoformat(),
-            "2099-12-31T23:59:59"
-        ))
-        await bot.db._conn.commit()
+        await bot.db.create_application(
+            discord_id=temp_discord_id,
+            username=leader_name,
+            student_id=leader_student_id,
+            department=data.get('department', '미정'),
+            skill="팀장",
+            activity_id=1,
+            group_code=None
+        )
         
-        # 구글 시트 저장
         sheet_data = {
             "team_id": team_id,
-            "leader_unique_id": team_id, # 이 ID로 디스코드에서 인증
+            "leader_unique_id": team_id,
             "leader_name": leader_name,
             "leader_student_id": leader_student_id,
             "department": data.get('department', ''),
@@ -168,4 +148,126 @@ async def api_create_team(request: web.Request):
         
     except Exception as e:
         log.error(f"구인 신청 API 처리 오류: {e}")
+        return add_cors_headers(web.json_response({"success": False, "error": str(e)}, status=500))
+
+# [신규] 회원가입 API
+@routes.post('/api/signup')
+async def api_signup(request: web.Request):
+    bot = request.app['bot']
+    try:
+        data = await request.json()
+        web_id = data.get('web_id', '').strip()
+        nickname = data.get('nickname', '').strip()
+        unique_id = data.get('unique_id', '').strip()
+        
+        if not web_id or not nickname or not unique_id:
+            return add_cors_headers(web.json_response({"success": False, "error": "필수 필드가 누락되었습니다."}))
+            
+        # Unique_ID 존재 여부 검증
+        user_record = await bot.gsheet.find_unique_id(unique_id)
+        if not user_record:
+            return add_cors_headers(web.json_response({"success": False, "error": "유효하지 않은 인증키입니다."}))
+            
+        # Web_ID 중복 여부 검증
+        existing_member = await bot.gsheet.get_member_by_id(web_id)
+        if existing_member:
+            return add_cors_headers(web.json_response({"success": False, "error": "이미 사용 중인 아이디입니다."}))
+            
+        # 회원 정보 등록
+        member_data = {
+            "web_id": web_id,
+            "nickname": nickname,
+            "unique_id": unique_id
+        }
+        success = await bot.gsheet.register_member(member_data)
+        
+        if success:
+            return add_cors_headers(web.json_response({"success": True}))
+        else:
+            return add_cors_headers(web.json_response({"success": False, "error": "구글 시트 저장 실패"}, status=500))
+            
+    except Exception as e:
+        log.error(f"회원가입 처리 오류: {e}")
+        return add_cors_headers(web.json_response({"success": False, "error": str(e)}, status=500))
+
+# [신규] 로그인 API
+@routes.post('/api/login')
+async def api_login(request: web.Request):
+    bot = request.app['bot']
+    try:
+        data = await request.json()
+        web_id = data.get('web_id', '').strip()
+        unique_id = data.get('unique_id', '').strip()
+        
+        member = None
+        if web_id:
+            member = await bot.gsheet.get_member_by_id(web_id)
+        elif unique_id:
+            member = await bot.gsheet.get_member_by_unique_id(unique_id)
+            if not member:
+                # 비회원(아이디 안만든 유저) 확인
+                raw_user = await bot.gsheet.find_unique_id(unique_id)
+                if raw_user:
+                    return add_cors_headers(web.json_response({
+                        "success": True,
+                        "data": {
+                            "web_id": None,
+                            "nickname": raw_user.get("이름", "이름없음"),
+                            "unique_id": unique_id,
+                            "logged_in": True
+                        }
+                    }))
+                    
+        if member:
+            return add_cors_headers(web.json_response({
+                "success": True,
+                "data": {
+                    "web_id": member.get("Web_ID"),
+                    "nickname": member.get("닉네임"),
+                    "unique_id": member.get("Unique_ID"),
+                    "logged_in": True
+                }
+            }))
+        else:
+            return add_cors_headers(web.json_response({"success": False, "error": "회원 정보를 찾을 수 없습니다."}))
+            
+    except Exception as e:
+        log.error(f"로그인 처리 오류: {e}")
+        return add_cors_headers(web.json_response({"success": False, "error": str(e)}, status=500))
+
+# [신규] 현황 조회 API
+@routes.get('/api/my-status')
+async def api_my_status(request: web.Request):
+    bot = request.app['bot']
+    try:
+        uid = request.query.get('uid', '').strip()
+        if not uid:
+            return add_cors_headers(web.json_response({"success": False, "error": "uid 파라미터가 필요합니다."}))
+            
+        status_data = await bot.gsheet.get_user_status(uid)
+        return add_cors_headers(web.json_response({"success": True, "data": status_data}))
+        
+    except Exception as e:
+        log.error(f"현황 조회 처리 오류: {e}")
+        return add_cors_headers(web.json_response({"success": False, "error": str(e)}, status=500))
+
+# [신규] 디스코드 연동 코드 생성 API
+@routes.post('/api/generate-link-code')
+async def api_generate_link_code(request: web.Request):
+    bot = request.app['bot']
+    try:
+        data = await request.json()
+        uid = data.get('unique_id', '').strip()
+        
+        if not uid:
+            return add_cors_headers(web.json_response({"success": False, "error": "인증키가 필요합니다."}))
+            
+        code = await bot.gsheet.generate_link_code(uid)
+        if code:
+            return add_cors_headers(web.json_response({"success": True, "code": code}))
+        else:
+            return add_cors_headers(web.json_response({"success": False, "error": "코드 생성 실패"}))
+            
+    except Exception as e:
+        log.error(f"연동 코드 생성 처리 오류: {e}")
         return add_cors_headers(web.json_response({"success": False, "error": str(e)}, status=500))

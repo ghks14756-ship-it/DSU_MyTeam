@@ -148,6 +148,39 @@ class GoogleSheetService:
             log.error(f"[fetch_applications] 실패: {e}")
             return []
 
+    async def check_user_status(self, search_id: str) -> dict:
+        """
+        [신규] 관리자용 상태조회: 특정 유저의 인증/매칭 상태를 반환.
+        통합_사용자_관리 및 매칭_대기_라인에서 조회.
+        """
+        if not self._is_configured():
+            return {"error": "구글 시트 미연동"}
+        
+        try:
+            loop = asyncio.get_running_loop()
+            client = await loop.run_in_executor(None, self._get_client)
+
+            def _fetch():
+                # 1. 통합_사용자_관리에서 인증 상태 조회
+                sheet_users = client.open_by_key(self.spreadsheet_id).worksheet(self.worksheet_users)
+                user_records = sheet_users.get_all_records()
+                user_info = next((r for r in user_records if str(r.get("Unique_ID", "")) == search_id or str(r.get("Discord_ID", "")) == search_id), None)
+
+                # 2. 매칭_대기_라인에서 매칭 상태 조회
+                sheet_waiting = client.open_by_key(self.spreadsheet_id).worksheet(self.worksheet_waiting)
+                waiting_records = sheet_waiting.get_all_records()
+                waiting_info = next((r for r in waiting_records if str(r.get("Unique_ID", "")) == search_id), None)
+
+                return {
+                    "user_info": user_info,
+                    "waiting_info": waiting_info
+                }
+
+            return await loop.run_in_executor(None, _fetch)
+        except Exception as e:
+            log.error(f"[check_user_status] 실패: {e}")
+            return {"error": str(e)}
+
     async def record_application(self, data: Dict[str, Any]) -> bool:
         """개인 매칭 신청 → 통합_사용자_관리 + 매칭_대기_라인 시트 기록."""
         if not self._is_configured():
@@ -169,7 +202,8 @@ class GoogleSheetService:
                 data.get('department', ''),
                 data.get('skill', ''),
                 data.get('program', '미정'),
-                now
+                now,
+                ""  # [신규] K열(인증키) 예약 공간. routes.py에서 나중에 채워짐.
             ]
 
             waiting_row = [

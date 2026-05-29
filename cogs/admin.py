@@ -165,7 +165,66 @@ class AdminCog(commands.Cog):
                 inline=False,
             )
         await interaction.response.send_message(embed=embed, ephemeral=True)
+    # ── /상태조회 ─────────────────────────────────────────────────
+    @app_commands.command(name="상태조회", description="[관리자] 특정 유저의 인증 및 매칭 상태를 조회합니다")
+    @app_commands.describe(search_id="Unique_ID(DUS-...) 또는 Discord_ID 입력")
+    @app_commands.default_permissions(administrator=True)
+    async def user_status(self, interaction: discord.Interaction, search_id: str) -> None:
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        
+        status_data = await self.bot.gsheet.check_user_status(search_id.strip())
+        
+        if "error" in status_data:
+            await interaction.followup.send(f"❌ 조회 중 오류 발생: {status_data['error']}", ephemeral=True)
+            return
+            
+        user_info = status_data.get("user_info")
+        waiting_info = status_data.get("waiting_info")
+        
+        if not user_info and not waiting_info:
+            await interaction.followup.send(f"❌ '{search_id}' 에 해당하는 유저 기록을 찾을 수 없습니다.", ephemeral=True)
+            return
 
+        embed = discord.Embed(
+            title=f"🔍 유저 상태 조회: {search_id}",
+            color=discord.Color.green() if user_info and user_info.get("Auth_Status") == "인증완료" else discord.Color.orange()
+        )
+        
+        if user_info:
+            uid = user_info.get("Unique_ID", "N/A")
+            name = user_info.get("이름", "N/A")
+            auth_status = user_info.get("Auth_Status", "미인증")
+            discord_id = user_info.get("Discord_ID", "미연동")
+            
+            val = f"**이름**: {name}\n**Unique ID**: {uid}\n**Discord ID**: {discord_id}\n**인증 상태**: `{auth_status}`"
+            embed.add_field(name="👤 통합 사용자 관리 (기본 정보)", value=val, inline=False)
+            
+        if waiting_info:
+            match_status = waiting_info.get("Match_Status", "알 수 없음")
+            req_date = waiting_info.get("신청일시", "N/A")
+            
+            val = f"**매칭 상태**: `{match_status}`\n**신청 일시**: {req_date}"
+            embed.add_field(name="🕒 매칭 대기 라인", value=val, inline=False)
+        else:
+            embed.add_field(name="🕒 매칭 대기 라인", value="대기열 기록 없음 (매칭 완료되었거나 신청하지 않음)", inline=False)
 
+        # 로컬 DB 조회
+        try:
+            async with self.bot.db._conn.execute(
+                "SELECT discord_id, is_matched, created_at FROM applications WHERE discord_id = ? OR discord_id = ?",
+                (search_id, f"WEB_{search_id}")
+            ) as cursor:
+                db_row = await cursor.fetchone()
+                
+            if db_row:
+                val = f"**DB ID**: {db_row[0]}\n**매칭 완료 여부**: {'예 (1)' if db_row[1] else '대기중 (0)'}\n**생성일**: {db_row[2]}"
+                embed.add_field(name="💾 로컬 캐시 DB", value=val, inline=False)
+            else:
+                embed.add_field(name="💾 로컬 캐시 DB", value="DB에 해당 ID로 등록된 정보 없음", inline=False)
+        except Exception as e:
+            log.error(f"DB 조회 오류: {e}")
+            embed.add_field(name="💾 로컬 캐시 DB", value="조회 실패", inline=False)
+
+        await interaction.followup.send(embed=embed, ephemeral=True)
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(AdminCog(bot))

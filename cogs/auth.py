@@ -66,16 +66,27 @@ class AuthModal(discord.ui.Modal, title="🛡️ DSU MyTeam 서버 인증"):
         if role:
             try:
                 await interaction.user.add_roles(role)
+            except discord.Forbidden:
+                log.error(f"역할 부여 실패 (Forbidden): 봇의 역할(Role) 순위가 '{AUTH_ROLE_NAME}' 보다 낮거나 '역할 관리' 권한이 없습니다.")
+                await interaction.followup.send("⚠️ 인증은 성공했으나, 서버 설정(봇 권한) 문제로 채널 이용 권한을 부여받지 못했습니다. 관리자에게 문의하세요.", ephemeral=True)
+            except discord.HTTPException as e:
+                log.error(f"역할 부여 실패 (HTTPException): {e}")
             except Exception as e:
-                log.error(f"역할 부여 실패: {e}")
+                log.error(f"역할 부여 실패 (알 수 없는 오류): {e}")
+        else:
+            log.error(f"역할 찾기 실패: '{AUTH_ROLE_NAME}' 역할을 서버에서 찾을 수 없습니다. (Role=None)")
 
         # 미인증자 역할이 있다면 제거
         unverified_role = discord.utils.get(guild.roles, name=UNVERIFIED_ROLE_NAME)
         if unverified_role and unverified_role in interaction.user.roles:
             try:
                 await interaction.user.remove_roles(unverified_role)
+            except discord.Forbidden:
+                log.error(f"미인증자 역할 제거 실패 (Forbidden): 봇의 역할(Role) 순위 문제 또는 권한 부족.")
+            except discord.HTTPException as e:
+                log.error(f"미인증자 역할 제거 실패 (HTTPException): {e}")
             except Exception as e:
-                log.error(f"미인증자 역할 제거 실패: {e}")
+                log.error(f"미인증자 역할 제거 실패 (알 수 없는 오류): {e}")
 
         # 3. 로컬 DB의 임시 discord_id (WEB_uid)를 실제 discord_id로 업데이트
         # 이렇게 해야 인증된 유저만 매칭 엔진(random_match)의 대상이 됨

@@ -530,13 +530,13 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
                         <div id="keycard-value" class="font-headline-md text-headline-md text-primary tracking-widest break-all select-all pt-2">
                             DUS-9A2X-B7QW-P4M1-V5Z8
                         </div>
-                        <button class="mt-4 flex items-center justify-center gap-2 text-primary font-label-md text-label-md w-full hover:bg-surface-container-high py-2 rounded-lg transition-colors border border-transparent hover:border-primary-fixed-dim">
+                        <button class="mt-4 flex items-center justify-center gap-2 text-primary font-label-md text-label-md w-full hover:bg-surface-container-high py-2 rounded-lg transition-colors border border-transparent hover:border-primary-fixed-dim" onclick="navigator.clipboard.writeText(document.getElementById('keycard-value').innerText.trim()).then(() => alert('인증키가 복사되었습니다!'))">
                             <span class="material-symbols-outlined text-lg">content_copy</span> 복사하기
                         </button>
                     </div>
                     
                     <!-- Action Button -->
-                    <a class="bg-gradient-to-r from-primary to-secondary w-full sm:w-auto px-8 py-4 rounded-full font-label-md text-label-md text-on-primary flex items-center justify-center gap-3 hover:shadow-lg transition-all active:scale-95 duration-200" href="#">
+                    <a class="bg-gradient-to-r from-primary to-secondary w-full sm:w-auto px-8 py-4 rounded-full font-label-md text-label-md text-on-primary flex items-center justify-center gap-3 hover:shadow-lg transition-all active:scale-95 duration-200" href="https://discord.gg/bvGPbB7CE" target="_blank">
                         <span class="material-symbols-outlined text-xl">login</span> 디스코드 서버 입장
                     </a>
                     <a class="mt-6 font-label-md text-label-md text-tertiary hover:text-primary transition-colors cursor-pointer" onclick="navigate('dashboard')">

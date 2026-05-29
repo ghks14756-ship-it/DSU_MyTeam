@@ -60,6 +60,7 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
 @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 .page { display: none; }
 .page.active { display: block; animation: fade-in 0.3s ease-out forwards; }
+.top-page.active { display: block; animation: fade-in 0.3s ease-out forwards; }
 </style>
 </head>
 <body class="font-body-md text-on-surface antialiased pb-24 min-h-screen flex flex-col relative overflow-x-hidden">
@@ -77,13 +78,25 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
             <a href="#" onclick="navigate('recruit-step1')" id="nav-recruit" class="nav-link font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors">모집</a>
             <a href="#" onclick="navigate('status')" id="nav-status" class="nav-link font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors flex flex-col items-center">현황</a>
         </nav>
-        <div class="flex items-center gap-4">
-            <button class="hidden md:flex bg-surface-container-high text-primary font-label-sm px-4 py-2 rounded-full items-center gap-2 hover:bg-surface-container-highest transition-colors active:scale-95 duration-200">
-                동서대 MYDEX 이동
-                <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
-            </button>
-            <div class="hidden md:block w-8 h-8 rounded-full overflow-hidden border border-outline-variant">
-                <img alt="User Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDxniJyJu8N4zC0M6isjNx8ECXEolxer8xPJVZM4kURbV6n5hl_11FM-varRf4VzqwbgT_KKgx2zr1L6Jqg8a4kJKEqWSKD39rJmkC79T-8aKYdGDJNPMBqBjEo9qnYLvK38y2hrLlji0_rWD4eNy4WU7xfHKmsKC-9NUjJ7jIo5MgC_jxjFt8odRTwTtPux1ZYvA8j7EAoikEhM_6cHqwf_NXX_LF9Ou9junec57NfDBIH-FNeyBQwhKLkUge7Gqfe1wrrGUn42lI">
+        <div id="header-auth-container" class="flex items-center gap-4">
+            <!-- Logged Out State -->
+            <button id="btn-header-login" onclick="openAuthModal()" class="text-primary font-label-md hover:bg-primary-container/30 px-5 py-2 rounded-full transition-colors active:scale-95 hidden md:block">로그인</button>
+            <button id="btn-header-login-mobile" onclick="openAuthModal()" class="md:hidden text-primary font-label-md px-2 py-2">로그인</button>
+            
+            <!-- Logged In State -->
+            <div id="header-logged-in" class="hidden flex items-center gap-3">
+                <button class="text-on-surface-variant hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-container" title="알림">
+                    <span class="material-symbols-outlined">notifications</span>
+                </button>
+                <button onclick="navigate('profile')" class="text-on-surface-variant hover:text-primary transition-colors font-label-md px-3 py-1.5 rounded-full border border-outline-variant hover:bg-surface-container" title="내정보">
+                    내정보
+                </button>
+                <div class="w-9 h-9 rounded-full overflow-hidden border border-outline-variant">
+                    <img id="header-profile-img" alt="User Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDxniJyJu8N4zC0M6isjNx8ECXEolxer8xPJVZM4kURbV6n5hl_11FM-varRf4VzqwbgT_KKgx2zr1L6Jqg8a4kJKEqWSKD39rJmkC79T-8aKYdGDJNPMBqBjEo9qnYLvK38y2hrLlji0_rWD4eNy4WU7xfHKmsKC-9NUjJ7jIo5MgC_jxjFt8odRTwTtPux1ZYvA8j7EAoikEhM_6cHqwf_NXX_LF9Ou9junec57NfDBIH-FNeyBQwhKLkUge7Gqfe1wrrGUn42lI">
+                </div>
+                <button onclick="logout()" class="text-on-surface-variant hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-container" title="로그아웃">
+                    <span class="material-symbols-outlined text-[20px]">logout</span>
+                </button>
             </div>
         </div>
     </div>
@@ -112,11 +125,87 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
     <!-- ============================== -->
     <!-- 화면명: 메인 대시보드          -->
     <!-- ============================== -->
-    <div id="page-dashboard" class="page active">
+    <!-- Profile Page -->
+        <section id="page-profile" class="top-page hidden w-full mb-gutter max-w-4xl mx-auto">
+            <h2 class="font-headline-lg text-primary mb-6 px-2">내정보</h2>
+            <div class="bg-surface rounded-2xl p-6 shadow-sm border border-outline-variant/30 space-y-6">
+                <!-- Profile Image (Disabled Placeholder) -->
+                <div class="flex items-center gap-6 pb-6 border-b border-outline-variant/30">
+                    <div class="w-24 h-24 rounded-full overflow-hidden border-2 border-outline-variant/50 bg-surface-container-lowest">
+                        <img id="profile-preview-img" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDxniJyJu8N4zC0M6isjNx8ECXEolxer8xPJVZM4kURbV6n5hl_11FM-varRf4VzqwbgT_KKgx2zr1L6Jqg8a4kJKEqWSKD39rJmkC79T-8aKYdGDJNPMBqBjEo9qnYLvK38y2hrLlji0_rWD4eNy4WU7xfHKmsKC-9NUjJ7jIo5MgC_jxjFt8odRTwTtPux1ZYvA8j7EAoikEhM_6cHqwf_NXX_LF9Ou9junec57NfDBIH-FNeyBQwhKLkUge7Gqfe1wrrGUn42lI" alt="Profile Preview" class="w-full h-full object-cover">
+                    </div>
+                    <div>
+                        <button disabled class="bg-surface-container-high text-on-surface-variant font-label-md px-4 py-2 rounded-lg opacity-50 cursor-not-allowed">사진 변경 (준비중)</button>
+                        <p class="text-label-sm text-outline mt-2">프로필 사진 변경 기능은 추후 활성화됩니다.</p>
+                    </div>
+                </div>
+
+                <!-- Info Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-label-sm text-on-surface-variant mb-1 ml-1">이름</label>
+                        <input type="text" id="profile-name" class="w-full bg-surface-container border border-outline-variant/50 rounded-xl px-4 py-3 outline-none text-on-surface-variant cursor-not-allowed" readonly value="불러오는 중...">
+                    </div>
+                    <div>
+                        <label class="block text-label-sm text-on-surface-variant mb-1 ml-1">아이디 (ID)</label>
+                        <input type="text" id="profile-id" class="w-full bg-surface-container border border-outline-variant/50 rounded-xl px-4 py-3 outline-none text-on-surface-variant cursor-not-allowed" readonly value="-">
+                    </div>
+                    <div>
+                        <label class="block text-label-sm text-on-surface-variant mb-1 ml-1">인증키</label>
+                        <input type="text" id="profile-key" class="w-full bg-surface-container border border-outline-variant/50 rounded-xl px-4 py-3 outline-none text-on-surface-variant cursor-not-allowed" readonly value="-">
+                    </div>
+                    <div>
+                        <label class="block text-label-sm text-on-surface-variant mb-1 ml-1">닉네임</label>
+                        <input type="text" id="profile-nickname" class="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-3 focus:border-primary outline-none transition-all">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-label-sm text-on-surface-variant mb-1 ml-1">이메일</label>
+                        <input type="email" id="profile-email" class="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-3 focus:border-primary outline-none transition-all" placeholder="선택사항">
+                    </div>
+                </div>
+
+                <!-- Schedule Section -->
+                <div class="pt-6 border-t border-outline-variant/30">
+                    <h3 class="font-title-md text-primary mb-2">나의 주간 활동 가능 시간</h3>
+                    <p class="text-body-sm text-on-surface-variant mb-4">프로젝트에 참여할 수 있는 시간을 선택해주세요. 드래그하여 여러 칸을 선택할 수 있습니다.</p>
+                    <div class="overflow-x-auto pb-2">
+                        <div class="min-w-[600px] border border-outline-variant/50 rounded-xl overflow-hidden bg-surface">
+                            <div class="grid grid-cols-8 bg-surface-container-lowest text-label-md text-on-surface-variant border-b border-outline-variant/50">
+                                <div class="p-3 text-center border-r border-outline-variant/50 font-bold bg-surface-container-low">시간</div>
+                                <div class="p-3 text-center border-r border-outline-variant/50">월</div>
+                                <div class="p-3 text-center border-r border-outline-variant/50">화</div>
+                                <div class="p-3 text-center border-r border-outline-variant/50">수</div>
+                                <div class="p-3 text-center border-r border-outline-variant/50">목</div>
+                                <div class="p-3 text-center border-r border-outline-variant/50">금</div>
+                                <div class="p-3 text-center border-r border-outline-variant/50">토</div>
+                                <div class="p-3 text-center">일</div>
+                            </div>
+                            <div id="profile-schedule-grid" class="divide-y divide-outline-variant/50">
+                                <!-- JS will populate this -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="pt-4 flex justify-end">
+                    <button onclick="submitProfile()" class="bg-primary text-on-primary font-label-md px-8 py-3 rounded-xl hover:bg-primary/90 transition-colors shadow-sm active:scale-95">수정완료</button>
+                </div>
+            </div>
+        </section>
+
+    <div id="page-dashboard" class="page">
         <!-- Hero Section -->
+        
+
         <!-- Hero Section (Carousel) -->
         <section class="w-full mb-gutter relative">
-            <h2 class="font-headline-lg text-headline-lg text-primary mb-4 px-2">현재 진행중인 프로그램</h2>
+            <div class="flex items-center justify-between mb-4 px-2">
+                <h2 class="font-headline-lg text-headline-lg text-primary">현재 진행중인 프로그램</h2>
+                <button onclick="window.open('https://mydex.dongseo.ac.kr', '_blank')" class="hidden md:flex bg-surface-container-high text-primary font-label-sm px-4 py-2 rounded-full items-center gap-2 hover:bg-surface-container-highest transition-colors active:scale-95 duration-200 border border-outline-variant/30">
+                    동서대 MYDEX 이동
+                    <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+                </button>
+            </div>
             
             <div class="relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-primary-container/30 to-secondary-container/30 border border-outline-variant/30 card-shadow min-h-[350px]">
                 
@@ -184,8 +273,8 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
             <!-- Card 4: Discord Match Board -->
             <div class="glass-card rounded-xl p-6 card-shadow flex flex-col justify-between aspect-square hover:-translate-y-1 transition-transform duration-300 discord-gradient relative overflow-hidden backdrop-blur-xl bg-white/40 border border-white/50 cursor-pointer" onclick="window.open('https://discord.gg/bvGPbB7CE', '_blank')">
                 <div class="flex justify-between items-start mb-6">
-                    <div class="w-12 h-12 rounded-2xl bg-white flex items-center justify-center p-2 shadow-sm relative z-10">
-                        <img alt="Discord Logo" class="w-full h-full object-contain rounded-xl" src="/discord.png">
+                    <div class="w-14 h-14 rounded-2xl bg-white flex items-center justify-center shadow-sm relative z-10 overflow-hidden">
+                        <img alt="Discord Logo" class="w-full h-full object-cover scale-110" src="./discord.png">
                     </div>
                 </div>
                 <h3 class="font-headline-sm text-headline-sm text-on-surface mb-2 relative z-10">팀 매칭 보드 (Discord)</h3>
@@ -310,27 +399,7 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
                     <input id="input-skill-apply" type="text" class="mt-4 w-full bg-surface-container-low border border-outline-variant/50 rounded-lg px-4 py-3 font-body-md text-body-md focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all hidden" placeholder="직접 전문 분야를 입력하세요">
                 </div>
 
-                <!-- Team Filtering Conditions -->
-                <div class="bg-surface-container-lowest rounded-xl p-6 shadow-[0px_4px_20px_rgba(0,0,0,0.05)] border border-outline-variant/30 mt-stack-lg">
-                    <h2 class="font-headline-sm text-headline-sm text-on-surface mb-stack-sm flex items-center gap-2">
-                        <span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">filter_list</span>
-                        희망 팀 조건 (최대 3개)
-                    </h2>
-                    <div class="space-y-3">
-                        <label class="flex items-center gap-3 p-3 rounded-lg hover:bg-surface-container transition-colors cursor-pointer border border-transparent hover:border-outline-variant/20">
-                            <input name="condition" value="오프라인 모임 선호" checked class="w-5 h-5 text-primary rounded border-outline-variant focus:ring-primary focus:ring-offset-0 bg-surface" type="checkbox">
-                            <span class="font-body-md text-body-md text-on-surface">오프라인 모임 선호</span>
-                        </label>
-                        <label class="flex items-center gap-3 p-3 rounded-lg hover:bg-surface-container transition-colors cursor-pointer border border-transparent hover:border-outline-variant/20">
-                            <input name="condition" value="동일 학년 우대" checked class="w-5 h-5 text-primary rounded border-outline-variant focus:ring-primary focus:ring-offset-0 bg-surface" type="checkbox">
-                            <span class="font-body-md text-body-md text-on-surface">동일 학년 우대</span>
-                        </label>
-                        <label class="flex items-center gap-3 p-3 rounded-lg hover:bg-surface-container transition-colors cursor-pointer border border-transparent hover:border-outline-variant/20">
-                            <input name="condition" value="타 전공 융합 팀 선호" class="w-5 h-5 text-primary rounded border-outline-variant focus:ring-primary focus:ring-offset-0 bg-surface" type="checkbox">
-                            <span class="font-body-md text-body-md text-on-surface">타 전공 융합 팀 선호</span>
-                        </label>
-                    </div>
-                </div>
+
                 <!-- Warning and Submit -->
                 <div class="bg-error-container/30 border border-error-container rounded-xl p-4 flex gap-3 items-start mt-stack-lg">
                     <span class="material-symbols-outlined text-error" style="font-variation-settings: 'FILL' 1;">info</span>
@@ -392,7 +461,7 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
                         <div class="group">
                             <label class="block text-label-sm font-label-sm text-on-surface-variant mb-2 ml-1">연락 수단 종류</label>
                             <div class="relative">
-                                <select class="w-full appearance-none bg-surface border border-outline-variant rounded-lg px-4 py-3 font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
+                                <select id="contact-type" onchange="updateContactUI()" class="w-full appearance-none bg-surface border border-outline-variant rounded-lg px-4 py-3 font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
                                     <option value="phone">휴대폰 번호</option>
                                     <option value="kakao">카카오톡 ID</option>
                                     <option value="discord">디스코드 ID</option>
@@ -403,10 +472,10 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
                             </div>
                         </div>
                         <div class="group">
-                            <label class="block text-label-sm font-label-sm text-on-surface-variant mb-2 ml-1">휴대폰 번호 입력</label>
+                            <label id="contact-label" class="block text-label-sm font-label-sm text-on-surface-variant mb-2 ml-1">휴대폰 번호 입력</label>
                             <div class="relative flex items-center">
-                                <span class="material-symbols-outlined absolute left-4 text-on-surface-variant" style="font-variation-settings: 'FILL' 0;">call</span>
-                                <input class="w-full bg-surface border border-outline-variant rounded-lg pl-12 pr-4 py-3 font-body-md text-body-md text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" placeholder="010-0000-0000" type="tel"/>
+                                <span id="contact-icon" class="material-symbols-outlined absolute left-4 text-on-surface-variant" style="font-variation-settings: 'FILL' 0;">call</span>
+                                <input id="contact-value" class="w-full bg-surface border border-outline-variant rounded-lg pl-12 pr-4 py-3 font-body-md text-body-md text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" placeholder="010-0000-0000" type="text"/>
                             </div>
                         </div>
                     </div>
@@ -823,20 +892,32 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
 <script>
     // Navigation logic
     function navigate(pageId, options = {}) {
+        // Hide all .page elements
         document.querySelectorAll('.page').forEach(page => {
             page.classList.remove('active');
         });
-        document.getElementById('page-' + pageId).classList.add('active');
+        // Also hide .top-page elements (e.g. page-profile)
+        document.querySelectorAll('.top-page').forEach(page => {
+            page.classList.remove('active');
+            page.classList.add('hidden');
+        });
+
+        const target = document.getElementById('page-' + pageId);
+        if (target) {
+            target.classList.add('active');
+            target.classList.remove('hidden');
+        }
+
+        // 프로필 페이지 로드
+        if (pageId === 'profile') {
+            loadProfile();
+        }
         
         // 동적 타이틀 렌더링
         if(pageId === 'apply-step1') {
             const titleEl = document.getElementById('apply-page-title');
             if(titleEl) {
-                if(options.mode === 'join') {
-                    titleEl.innerText = '가입 신청';
-                } else {
-                    titleEl.innerText = '매칭 신청';
-                }
+                titleEl.innerText = (options.mode === 'join') ? '가입 신청' : '매칭 신청';
             }
         }
         
@@ -844,8 +925,6 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
         document.querySelectorAll('header nav a').forEach(a => {
             a.classList.remove('text-primary', 'font-bold', 'border-b-2', 'border-primary', 'pb-1');
             a.classList.add('text-on-surface-variant');
-            // Remove the status dot if exists
-            if(a.querySelector('span')) a.querySelector('span').remove();
         });
         
         let targetNav = null;
@@ -856,9 +935,7 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
         if(targetNav) {
             targetNav.classList.remove('text-on-surface-variant');
             targetNav.classList.add('text-primary', 'font-bold');
-            if(targetNav.id === 'nav-status') {
-                targetNav.innerHTML = '현황<span class="w-1.5 h-1.5 rounded-full bg-primary mt-1"></span>';
-            } else {
+            if(targetNav.id !== 'nav-status') {
                 targetNav.classList.add('border-b-2', 'border-primary', 'pb-1');
             }
         }
@@ -909,10 +986,9 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
                 cell.className = 'time-slot bg-surface-container h-12 transition-all duration-150 active:scale-95 hover:bg-primary-container/30 border border-outline-variant/10';
                 cell.type = 'button';
                 
-                if (Math.random() > 0.8) {
-                    cell.classList.remove('bg-surface-container');
-                    cell.classList.add('bg-primary-container', 'border-primary/20');
-                }
+                const dayName = ["월", "화", "수", "목", "금", "토", "일"][i];
+                const hour = time.split(':')[0];
+                cell.dataset.value = `${dayName}${hour}`;
 
                 cell.onclick = () => {
                     if (cell.classList.contains('bg-surface-container')) {
@@ -934,6 +1010,30 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
             slot.classList.remove('bg-primary-container', 'border-primary/20');
             slot.classList.add('bg-surface-container');
         });
+    }
+
+    function updateContactUI() {
+        const type = document.getElementById('contact-type').value;
+        const label = document.getElementById('contact-label');
+        const icon = document.getElementById('contact-icon');
+        const input = document.getElementById('contact-value');
+        
+        if (type === 'phone') {
+            label.innerText = '휴대폰 번호 입력';
+            icon.innerText = 'call';
+            input.placeholder = '010-0000-0000';
+            input.type = 'tel';
+        } else if (type === 'kakao') {
+            label.innerText = '카카오톡 ID 입력';
+            icon.innerText = 'chat';
+            input.placeholder = '카카오톡 ID를 입력하세요';
+            input.type = 'text';
+        } else if (type === 'discord') {
+            label.innerText = '디스코드 ID 입력';
+            icon.innerText = 'tag';
+            input.placeholder = '디스코드 사용자명 (예: user#1234)';
+            input.type = 'text';
+        }
     }
 
     // Counter Adjustment for Recruit Step 2
@@ -1200,11 +1300,22 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
 
     document.addEventListener('DOMContentLoaded', () => {
         initGrid();
-        // Initialize active state based on dashboard
+        initProfileScheduleGrid();
         navigate('dashboard');
         loadPrograms();
         loadTeams();
         setTimeout(updateCarouselPadding, 100);
+        checkLoginState();
+        
+        // 마우스 드래그 해제
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+            profileIsDragging = false;
+        });
+        document.addEventListener('mouseleave', () => {
+            isDragging = false;
+            profileIsDragging = false;
+        });
     });
 
     // API 연동: 매칭 신청 제출
@@ -1228,9 +1339,23 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
         }
         const skill = skillArray.length > 0 ? skillArray.join(', ') : "선택안함";
         
-        // 조건 선택 수집
-        const conditionCheckboxes = document.querySelectorAll('input[name="condition"]:checked');
+        // 조건 선택 수집 (2페이지에서 수집)
+        const conditionCheckboxes = document.querySelectorAll('input[name="condition2"]:checked');
         const conditionArray = Array.from(conditionCheckboxes).map(cb => cb.value);
+        
+        // 스케줄 수집
+        const activeSlots = document.querySelectorAll('.time-slot.bg-primary-container');
+        const scheduleArray = Array.from(activeSlots).map(slot => slot.dataset.value);
+        const weekly_schedule = scheduleArray.join(',');
+        
+        // 연락수단 수집
+        const contactTypeEl = document.getElementById('contact-type');
+        const contactValueEl = document.getElementById('contact-value');
+        let contact = "";
+        if (contactTypeEl && contactValueEl && contactValueEl.value.trim() !== '') {
+            const typeText = contactTypeEl.options[contactTypeEl.selectedIndex].text;
+            contact = `${typeText}: ${contactValueEl.value.trim()}`;
+        }
         
         // 프로그램 선택 수집
         const programRadio = document.querySelector('input[name="program"]:checked');
@@ -1243,7 +1368,9 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
             skill: skill,
             condition_1: conditionArray[0] || "",
             condition_2: conditionArray[1] || "",
-            condition_3: conditionArray[2] || ""
+            condition_3: conditionArray[2] || "",
+            weekly_schedule: weekly_schedule,
+            contact: contact
         };
 
         try {
@@ -1353,6 +1480,347 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
             console.error(e);
         }
     }
+
+    // --- Profile Logic ---
+
+    let profileIsDragging = false;
+    let profileDragSelect = true;
+
+    function initProfileScheduleGrid() {
+        const grid = document.getElementById('profile-schedule-grid');
+        if(!grid) return;
+        grid.innerHTML = '';
+        const days = ['월', '화', '수', '목', '금', '토', '일'];
+        
+        for (let time = 9; time <= 23; time++) {
+            const row = document.createElement('div');
+            row.className = 'grid grid-cols-8';
+            
+            const timeCell = document.createElement('div');
+            timeCell.className = 'p-2 text-center border-r border-outline-variant/50 font-label-sm text-on-surface-variant bg-surface-container-lowest flex items-center justify-center';
+            timeCell.textContent = `${time}:00`;
+            row.appendChild(timeCell);
+            
+            days.forEach(day => {
+                const cell = document.createElement('div');
+                cell.className = 'profile-schedule-cell p-2 border-r last:border-r-0 border-outline-variant/50 h-10 cursor-pointer hover:bg-primary-container/20 transition-colors relative';
+                cell.dataset.day = day;
+                cell.dataset.time = time;
+                
+                cell.addEventListener('mousedown', (e) => {
+                    profileIsDragging = true;
+                    profileDragSelect = !cell.classList.contains('bg-primary');
+                    toggleProfileCell(cell, profileDragSelect);
+                });
+                cell.addEventListener('mouseenter', (e) => {
+                    if (profileIsDragging) toggleProfileCell(cell, profileDragSelect);
+                });
+                
+                row.appendChild(cell);
+            });
+            grid.appendChild(row);
+        }
+    }
+
+    function toggleProfileCell(cell, select) {
+        if (select) {
+            cell.classList.add('bg-primary', 'border-primary', 'profile-selected-cell');
+            cell.classList.remove('hover:bg-primary-container/20');
+        } else {
+            cell.classList.remove('bg-primary', 'border-primary', 'profile-selected-cell');
+            cell.classList.add('hover:bg-primary-container/20');
+        }
+    }
+
+    async function loadProfile() {
+        const uniqueId = localStorage.getItem('unique_id');
+        if (!uniqueId) {
+            alert('로그인이 필요합니다.');
+            navigate('dashboard');
+            return;
+        }
+
+        try {
+            const res = await fetch(`http://localhost:8080/api/my-profile?uid=${uniqueId}`);
+            const result = await res.json();
+            if (result.success) {
+                const d = result.data;
+                document.getElementById('profile-name').value = d.name || '알수없음';
+                document.getElementById('profile-id').value = d.web_id || '비회원';
+                document.getElementById('profile-key').value = d.unique_id || '-';
+                document.getElementById('profile-nickname').value = d.nickname || '';
+                document.getElementById('profile-email').value = d.email || '';
+                
+                // Set Schedule Grid
+                document.querySelectorAll('.profile-selected-cell').forEach(c => toggleProfileCell(c, false));
+                if (d.schedule) {
+                    let scheduleArr = [];
+                    if (d.schedule.includes('[')) {
+                        try { scheduleArr = JSON.parse(d.schedule); } catch(e) {}
+                    } else {
+                        scheduleArr = d.schedule.split(',').map(s=>s.trim()).filter(s=>s);
+                    }
+                    if (Array.isArray(scheduleArr)) {
+                        scheduleArr.forEach(item => {
+                            const day = item.charAt(0);
+                            const time = item.substring(1);
+                            const cell = document.querySelector(`.profile-schedule-cell[data-day="${day}"][data-time="${time}"]`);
+                            if (cell) toggleProfileCell(cell, true);
+                        });
+                    }
+                }
+            } else {
+                alert('프로필을 불러올 수 없습니다: ' + result.error);
+            }
+        } catch (e) {
+            console.error('Failed to load profile', e);
+        }
+    }
+
+    async function submitProfile() {
+        const nickname = document.getElementById('profile-nickname').value.trim();
+        const email = document.getElementById('profile-email').value.trim();
+        const uniqueId = localStorage.getItem('unique_id');
+        
+        // Collect Schedule
+        const selectedCells = document.querySelectorAll('.profile-selected-cell');
+        const scheduleList = Array.from(selectedCells).map(cell => `${cell.dataset.day}${cell.dataset.time}`);
+        
+        const payload = {
+            unique_id: uniqueId,
+            nickname: nickname,
+            email: email,
+            schedule: scheduleList.join(',')
+        };
+        
+        try {
+            const res = await fetch('http://localhost:8080/api/my-profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await res.json();
+            if (result.success) {
+                alert('프로필이 성공적으로 수정되었습니다.');
+                if(nickname) localStorage.setItem('nickname', nickname);
+            } else {
+                alert('저장 실패: ' + result.error);
+            }
+        } catch (e) {
+            alert('서버 연결 오류');
+        }
+    }
+
+    // --- Auth Logic ---
+    function checkLoginState() {
+        const userId = localStorage.getItem('web_id') || localStorage.getItem('unique_id');
+        const loginBtn = document.getElementById('btn-header-login');
+        const loginBtnMobile = document.getElementById('btn-header-login-mobile');
+        const loggedInDiv = document.getElementById('header-logged-in');
+        
+        if (userId) {
+            if(loginBtn) { loginBtn.classList.remove('md:block'); loginBtn.classList.add('hidden'); }
+            if(loginBtnMobile) loginBtnMobile.classList.add('hidden');
+            if(loggedInDiv) {
+                loggedInDiv.classList.remove('hidden');
+            }
+        } else {
+            if(loginBtn) { loginBtn.classList.add('md:block'); loginBtn.classList.remove('hidden'); }
+            if(loginBtnMobile) loginBtnMobile.classList.remove('hidden');
+            if(loggedInDiv) {
+                loggedInDiv.classList.add('hidden');
+            }
+        }
+    }
+
+    function openAuthModal() {
+        const modal = document.getElementById('auth-modal');
+        const content = document.getElementById('auth-modal-content');
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            content.classList.remove('scale-95');
+        }, 10);
+    }
+
+    function closeAuthModal() {
+        const modal = document.getElementById('auth-modal');
+        const content = document.getElementById('auth-modal-content');
+        modal.classList.add('opacity-0');
+        content.classList.add('scale-95');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+        }, 300);
+    }
+
+    function switchAuthView(view) {
+        if (view === 'login') {
+            document.getElementById('auth-view-login').classList.remove('hidden');
+            document.getElementById('auth-view-signup').classList.add('hidden');
+        } else {
+            document.getElementById('auth-view-login').classList.add('hidden');
+            document.getElementById('auth-view-signup').classList.remove('hidden');
+        }
+    }
+
+    function switchAuthTab(tab) {
+        const btnId = document.getElementById('tab-id-login');
+        const btnKey = document.getElementById('tab-key-login');
+        const formId = document.getElementById('form-login-id');
+        const formKey = document.getElementById('form-login-key');
+        
+        if (tab === 'login-id') {
+            btnId.className = 'flex-1 py-2 text-label-md rounded-md bg-primary/10 text-primary font-bold shadow-sm transition-all';
+            btnKey.className = 'flex-1 py-2 text-label-md rounded-md text-on-surface-variant hover:text-primary transition-all';
+            formId.classList.remove('hidden');
+            formKey.classList.add('hidden');
+        } else {
+            btnKey.className = 'flex-1 py-2 text-label-md rounded-md bg-primary/10 text-primary font-bold shadow-sm transition-all';
+            btnId.className = 'flex-1 py-2 text-label-md rounded-md text-on-surface-variant hover:text-primary transition-all';
+            formKey.classList.remove('hidden');
+            formId.classList.add('hidden');
+        }
+    }
+
+    async function submitLogin(type) {
+        let payload = {};
+        if (type === 'id') {
+            const idVal = document.getElementById('login-id-input').value.trim();
+            if (!idVal) return alert('아이디를 입력해주세요.');
+            payload = { web_id: idVal };
+        } else {
+            const keyVal = document.getElementById('login-key-input').value.trim();
+            if (!keyVal) return alert('인증키를 입력해주세요.');
+            payload = { unique_id: keyVal };
+        }
+        
+        try {
+            const res = await fetch('http://localhost:8080/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await res.json();
+            if (result.success) {
+                localStorage.setItem('web_id', result.data.web_id || '');
+                localStorage.setItem('unique_id', result.data.unique_id || '');
+                localStorage.setItem('nickname', result.data.nickname || '');
+                alert(`${result.data.nickname}님 환영합니다!`);
+                closeAuthModal();
+                checkLoginState();
+            } else {
+                alert('로그인 실패: ' + result.error);
+            }
+        } catch (e) {
+            alert('서버 연결 오류. (봇이 켜져 있는지 확인하세요)');
+        }
+    }
+
+    async function submitSignup() {
+        const id = document.getElementById('signup-id').value.trim();
+        const name = document.getElementById('signup-name').value.trim();
+        const nicknameRaw = document.getElementById('signup-nickname').value.trim();
+        const key = document.getElementById('signup-key').value.trim();
+        
+        if (!id || !name || !key) {
+            return alert('필수 항목(* 표시)을 모두 입력해주세요.');
+        }
+        
+        const nickname = nicknameRaw || name; // Fallback
+        
+        const payload = { web_id: id, name: name, nickname: nickname, unique_id: key };
+        
+        try {
+            const res = await fetch('http://localhost:8080/api/signup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await res.json();
+            if (result.success) {
+                alert('회원가입이 완료되었습니다! 로그인해주세요.');
+                switchAuthView('login');
+                document.getElementById('login-id-input').value = id;
+                switchAuthTab('login-id');
+            } else {
+                alert('가입 실패: ' + result.error);
+            }
+        } catch (e) {
+            alert('서버 연결 오류');
+        }
+    }
+
+    function logout() {
+        if(confirm('로그아웃 하시겠습니까?')) {
+            localStorage.clear();
+            checkLoginState();
+        }
+    }
+
+
 </script>
+    <!-- Auth Modal -->
+    <div id="auth-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity opacity-0">
+        <div class="bg-surface rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl border border-primary/20 relative transform scale-95 transition-transform duration-300" id="auth-modal-content">
+            <button onclick="closeAuthModal()" class="absolute top-5 right-5 text-on-surface-variant hover:text-primary transition-colors">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+            
+            <!-- Login View -->
+            <div id="auth-view-login">
+                <h2 class="font-headline-md text-primary mb-6 text-center">로그인</h2>
+                <div class="flex gap-2 p-1 bg-surface-container-lowest rounded-lg mb-6 border border-outline-variant/30">
+                    <button id="tab-id-login" class="flex-1 py-2 text-label-md rounded-md bg-primary/10 text-primary font-bold shadow-sm transition-all" onclick="switchAuthTab('login-id')">아이디 로그인</button>
+                    <button id="tab-key-login" class="flex-1 py-2 text-label-md rounded-md text-on-surface-variant hover:text-primary transition-all" onclick="switchAuthTab('login-key')">인증키 로그인</button>
+                </div>
+                
+                <div id="form-login-id" class="space-y-4">
+                    <input type="text" id="login-id-input" class="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-3.5 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-outline" placeholder="아이디 입력">
+                    <button onclick="submitLogin('id')" class="w-full bg-gradient-to-r from-primary to-secondary text-on-primary py-3.5 rounded-xl font-label-md hover:shadow-lg transition-all active:scale-[0.98]">로그인</button>
+                </div>
+                
+                <div id="form-login-key" class="hidden space-y-4">
+                    <input type="text" id="login-key-input" class="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-3.5 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-outline" placeholder="발급받은 인증키 입력 (예: USER-1234)">
+                    <button onclick="submitLogin('key')" class="w-full bg-gradient-to-r from-primary to-secondary text-on-primary py-3.5 rounded-xl font-label-md hover:shadow-lg transition-all active:scale-[0.98]">인증키로 시작하기</button>
+                </div>
+                
+                <div class="mt-8 text-center border-t border-outline-variant/30 pt-6">
+                    <p class="text-label-sm text-on-surface-variant mb-2">아직 계정이 없으신가요?</p>
+                    <button onclick="switchAuthView('signup')" class="text-primary font-label-md hover:underline hover:text-secondary transition-colors">회원가입하기</button>
+                </div>
+            </div>
+
+            <!-- Signup View -->
+            <div id="auth-view-signup" class="hidden">
+                <h2 class="font-headline-md text-primary mb-6 text-center">회원가입</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-label-sm text-on-surface-variant mb-1 ml-1">아이디 (ID) <span class="text-error">*</span></label>
+                        <input type="text" id="signup-id" class="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-3 focus:border-primary outline-none transition-all" placeholder="사용할 아이디 입력">
+                    </div>
+                    <div>
+                        <label class="block text-label-sm text-on-surface-variant mb-1 ml-1">이름 (Name) <span class="text-error">*</span></label>
+                        <input type="text" id="signup-name" class="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-3 focus:border-primary outline-none transition-all" placeholder="실명 입력">
+                    </div>
+                    <div>
+                        <label class="block text-label-sm text-on-surface-variant mb-1 ml-1">닉네임 (Nickname)</label>
+                        <input type="text" id="signup-nickname" class="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-3 focus:border-primary outline-none transition-all placeholder:text-outline" placeholder="입력하지 않으면 이름으로 사용합니다">
+                    </div>
+                    <div>
+                        <label class="block text-label-sm text-on-surface-variant mb-1 ml-1">인증키 (Auth Key) <span class="text-error">*</span></label>
+                        <input type="text" id="signup-key" class="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-3 focus:border-primary outline-none transition-all" placeholder="발급받은 봇 인증키 입력">
+                    </div>
+                    
+                    <button onclick="submitSignup()" class="w-full bg-gradient-to-r from-primary to-secondary text-on-primary py-3.5 rounded-xl font-label-md hover:shadow-lg transition-all active:scale-[0.98] mt-2">가입 완료하기</button>
+                </div>
+                
+                <div class="mt-6 text-center">
+                    <button onclick="switchAuthView('login')" class="text-on-surface-variant text-label-md hover:text-primary transition-colors flex items-center justify-center gap-1 mx-auto">
+                        <span class="material-symbols-outlined text-[18px]">arrow_back</span> 로그인으로 돌아가기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

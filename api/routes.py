@@ -157,10 +157,11 @@ async def api_signup(request: web.Request):
     try:
         data = await request.json()
         web_id = data.get('web_id', '').strip()
-        nickname = data.get('nickname', '').strip()
+        name = data.get('name', '').strip()
+        nickname = data.get('nickname', '').strip() or name # 닉네임 없으면 이름으로 Fallback
         unique_id = data.get('unique_id', '').strip()
         
-        if not web_id or not nickname or not unique_id:
+        if not web_id or not name or not unique_id:
             return add_cors_headers(web.json_response({"success": False, "error": "필수 필드가 누락되었습니다."}))
             
         # Unique_ID 존재 여부 검증
@@ -208,6 +209,7 @@ async def api_login(request: web.Request):
                 # 비회원(아이디 안만든 유저) 확인
                 raw_user = await bot.gsheet.find_unique_id(unique_id)
                 if raw_user:
+                    # 비회원은 통합_사용자_관리의 가입시간을 업데이트할 수도 있지만 현재는 pass
                     return add_cors_headers(web.json_response({
                         "success": True,
                         "data": {
@@ -219,6 +221,10 @@ async def api_login(request: web.Request):
                     }))
                     
         if member:
+            # 로그인 성공 시 최근 접속일시 갱신
+            update_id = web_id if web_id else unique_id
+            await bot.gsheet.update_last_login(update_id, is_web_id=bool(web_id))
+            
             return add_cors_headers(web.json_response({
                 "success": True,
                 "data": {
@@ -270,4 +276,47 @@ async def api_generate_link_code(request: web.Request):
             
     except Exception as e:
         log.error(f"연동 코드 생성 처리 오류: {e}")
+        return add_cors_headers(web.json_response({"success": False, "error": str(e)}, status=500))
+
+# [신규] 내정보 조회 API
+@routes.get('/api/my-profile')
+async def api_get_my_profile(request: web.Request):
+    bot = request.app['bot']
+    try:
+        uid = request.query.get('uid', '').strip()
+        if not uid:
+            return add_cors_headers(web.json_response({"success": False, "error": "uid 파라미터가 필요합니다."}))
+            
+        profile = await bot.gsheet.get_user_profile(uid)
+        if not profile:
+            return add_cors_headers(web.json_response({"success": False, "error": "사용자를 찾을 수 없습니다."}))
+            
+        return add_cors_headers(web.json_response({"success": True, "data": profile}))
+        
+    except Exception as e:
+        log.error(f"내정보 조회 오류: {e}")
+        return add_cors_headers(web.json_response({"success": False, "error": str(e)}, status=500))
+
+# [신규] 내정보 수정 API
+@routes.post('/api/my-profile')
+async def api_update_my_profile(request: web.Request):
+    bot = request.app['bot']
+    try:
+        data = await request.json()
+        uid = data.get('unique_id', '').strip()
+        nickname = data.get('nickname', '').strip()
+        email = data.get('email', '').strip()
+        schedule = data.get('schedule', '').strip()
+        
+        if not uid:
+            return add_cors_headers(web.json_response({"success": False, "error": "unique_id가 누락되었습니다."}))
+            
+        success = await bot.gsheet.update_user_profile(uid, nickname, email, schedule)
+        if success:
+            return add_cors_headers(web.json_response({"success": True}))
+        else:
+            return add_cors_headers(web.json_response({"success": False, "error": "구글 시트 저장 실패"}, status=500))
+            
+    except Exception as e:
+        log.error(f"내정보 수정 오류: {e}")
         return add_cors_headers(web.json_response({"success": False, "error": str(e)}, status=500))

@@ -191,6 +191,14 @@ class GoogleSheetService:
                 doc = client.open_by_key(self.spreadsheet_id)
                 ws_users = doc.worksheet(self.worksheet_users)
                 ws_waiting = doc.worksheet(self.worksheet_waiting)
+                
+                users_header = ws_users.row_values(1)
+                waiting_header = ws_waiting.row_values(1)
+                if len(user_row) != len(users_header):
+                    raise ValueError(f"통합_사용자_관리 컬럼 불일치: 헤더 {len(users_header)}개 vs 데이터 {len(user_row)}개")
+                if len(waiting_row) != len(waiting_header):
+                    raise ValueError(f"매칭_대기_라인 컬럼 불일치: 헤더 {len(waiting_header)}개 vs 데이터 {len(waiting_row)}개")
+                
                 ws_users.append_row(user_row)
                 ws_waiting.append_row(waiting_row)
                 return True
@@ -408,6 +416,111 @@ class GoogleSheetService:
         except Exception as e:
             log.error(f"[get_member_by_unique_id] 실패: {e}")
             return None
+
+    async def update_last_login(self, identifier: str, is_web_id: bool = True) -> bool:
+        """[신규] 로그인 성공 시 회원_정보 탭의 최근_접속일시 업데이트"""
+        if not self._is_configured():
+            return False
+        try:
+            loop = asyncio.get_running_loop()
+            client = await loop.run_in_executor(None, self._get_client)
+            now = datetime.now(timezone.utc).isoformat()
+
+            def _update():
+                sheet = client.open_by_key(self.spreadsheet_id).worksheet(self.worksheet_members)
+                records = sheet.get_all_records()
+                for i, row in enumerate(records):
+                    match_val = str(row.get("Web_ID", "") if is_web_id else row.get("Unique_ID", ""))
+                    if match_val == identifier:
+                        # 8번째 컬럼이 최근_접속일시 (A=1, B=2, C=3, D=4, E=5, F=6, G=7, H=8)
+                        # 컬럼 개수: Web_ID, 닉네임, Unique_ID, Discord_ID, 연동_코드, Auth_Status, 가입일자, 최근_접속일시
+                        sheet.update_cell(i + 2, 8, now)
+                        return True
+                return False
+
+            return await loop.run_in_executor(None, _update)
+        except Exception as e:
+            log.error(f"[update_last_login] 실패: {e}")
+    async def get_user_profile(self, unique_id: str) -> Dict[str, Any] | None:
+        """
+        내정보 화면용 통합 데이터 조회
+        이름(통합_사용자_관리), 닉네임/이메일/Web_ID(회원_정보), 스케줄(매칭_대기_라인)
+        """
+        if not self._is_configured():
+            return None
+        try:
+            loop = asyncio.get_running_loop()
+            client = await loop.run_in_executor(None, self._get_client)
+
+            def _fetch():
+                doc = client.open_by_key(self.spreadsheet_id)
+                # 1. 통합_사용자_관리 (이름 조회)
+                users_ws = doc.worksheet(self.worksheet_users)
+                users = users_ws.get_all_records()
+                user_info = next((r for r in users if str(r.get("Unique_ID", "")).strip() == unique_id), None)
+                if not user_info:
+                    return None
+                
+                # 2. 회원_정보 (Web_ID, 닉네임, 이메일)
+                members_ws = doc.worksheet(self.worksheet_members)
+                members = members_ws.get_all_records()
+                member_info = next((r for r in members if str(r.get("Unique_ID", "")).strip() == unique_id), {})
+                
+                # 3. 매칭_대기_라인 (스케줄)
+                wait_ws = doc.worksheet(self.worksheet_waiting)
+                waits = wait_ws.get_all_records()
+                wait_info = next((r for r in waits if str(r.get("Unique_ID", "")).strip() == unique_id), {})
+                
+                return {
+                    "unique_id": unique_id,
+                    "name": user_info.get("이름", ""),
+                    "web_id": member_info.get("Web_ID", ""),
+                    "nickname": member_info.get("닉네임", ""),
+                    "email": member_info.get("이메일", ""),
+                    "schedule": wait_info.get("주간_활동_가능_시간", "")
+                }
+
+            return await loop.run_in_executor(None, _fetch)
+        except Exception as e:
+            log.error(f"[get_user_profile] 실패: {e}")
+            return None
+
+    async def update_user_profile(self, unique_id: str, nickname: str, email: str, schedule: str) -> bool:
+        """내정보 업데이트 (회원_정보 및 매칭_대기_라인)"""
+        if not self._is_configured():
+            return False
+        try:
+            loop = asyncio.get_running_loop()
+            client = await loop.run_in_executor(None, self._get_client)
+
+            def _update():
+                doc = client.open_by_key(self.spreadsheet_id)
+                
+                # 1. 회원_정보 업데이트 (닉네임, 이메일)
+                # 컬럼: 1:Web_ID, 2:닉네임, 3:Unique_ID, ..., 9:이메일, 10:프로필이미지
+                members_ws = doc.worksheet(self.worksheet_members)
+                members = members_ws.get_all_records()
+                for i, row in enumerate(members):
+                    if str(row.get("Unique_ID", "")).strip() == unique_id:
+                        members_ws.update_cell(i + 2, 2, nickname)
+                        members_ws.update_cell(i + 2, 9, email)
+                        break
+                        
+                # 2. 매칭_대기_라인 업데이트 (스케줄)
+                # 컬럼: 1:Unique_ID, ..., 8:주간_활동_가능_시간
+                wait_ws = doc.worksheet(self.worksheet_waiting)
+                waits = wait_ws.get_all_records()
+                for i, row in enumerate(waits):
+                    if str(row.get("Unique_ID", "")).strip() == unique_id:
+                        wait_ws.update_cell(i + 2, 8, schedule)
+                        break
+                        
+                return True
+
+            return await loop.run_in_executor(None, _update)
+        except Exception as e:
+            log.error(f"[update_user_profile] 실패: {e}")
+            return False
 
     async def get_user_status(self, unique_id: str) -> Dict[str, Any]:
         """

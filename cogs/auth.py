@@ -16,7 +16,8 @@ from discord.ext import commands
 log = logging.getLogger("DSUMyTeam.Auth")
 
 AUTH_CHANNEL_NAME = "입장-및-인증"
-AUTH_ROLE_NAME = "인증된 유저"
+AUTH_ROLE_NAME = "마이덱스이용자"
+UNVERIFIED_ROLE_NAME = "미인증자"
 
 class AuthModal(discord.ui.Modal, title="🛡️ DSU MyTeam 서버 인증"):
     auth_input = discord.ui.TextInput(
@@ -34,7 +35,8 @@ class AuthModal(discord.ui.Modal, title="🛡️ DSU MyTeam 서버 인증"):
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True, thinking=True)
         
-        user_input = self.auth_input.value.strip().upper()
+        # 대소문자 구분 없이 비교하기 위해 .strip()만 적용 (.upper() 제거)
+        user_input = self.auth_input.value.strip()
 
         if not self.bot.gsheet:
             await interaction.followup.send("⚠️ 구글 시트가 연결되어 있지 않아 인증할 수 없습니다.")
@@ -49,11 +51,10 @@ class AuthModal(discord.ui.Modal, title="🛡️ DSU MyTeam 서버 인증"):
         discord_id = str(interaction.user.id)
         guild = interaction.guild
 
-        # 2. 기본 역할 부여
+        # 2. 기본 역할 부여 및 미인증자 역할 제거
         role = discord.utils.get(guild.roles, name=AUTH_ROLE_NAME)
         if not role:
             try:
-                # 역할이 없으면 생성
                 role = await guild.create_role(
                     name=AUTH_ROLE_NAME,
                     color=discord.Color.blue(),
@@ -67,6 +68,14 @@ class AuthModal(discord.ui.Modal, title="🛡️ DSU MyTeam 서버 인증"):
                 await interaction.user.add_roles(role)
             except Exception as e:
                 log.error(f"역할 부여 실패: {e}")
+
+        # 미인증자 역할이 있다면 제거
+        unverified_role = discord.utils.get(guild.roles, name=UNVERIFIED_ROLE_NAME)
+        if unverified_role and unverified_role in interaction.user.roles:
+            try:
+                await interaction.user.remove_roles(unverified_role)
+            except Exception as e:
+                log.error(f"미인증자 역할 제거 실패: {e}")
 
         # 3. 로컬 DB의 임시 discord_id (WEB_uid)를 실제 discord_id로 업데이트
         # 이렇게 해야 인증된 유저만 매칭 엔진(random_match)의 대상이 됨
@@ -109,7 +118,7 @@ class AuthModal(discord.ui.Modal, title="🛡️ DSU MyTeam 서버 인증"):
             pass # DM 차단 무시
 
     async def _update_gsheet_auth(self, unique_id: str, discord_id: str):
-        """구글 시트에서 unique_id를 찾아 디스코드ID와 인증상태 업데이트"""
+        """구글 시트 통합_사용자_관리에서 unique_id를 찾아 Discord_ID와 Auth_Status 업데이트"""
         try:
             if not self.bot.gsheet.spreadsheet_id:
                 return
@@ -118,21 +127,22 @@ class AuthModal(discord.ui.Modal, title="🛡️ DSU MyTeam 서버 인증"):
             client = await loop.run_in_executor(None, self.bot.gsheet._get_client)
             
             def _update():
+                # 통합_사용자_관리 시트 (worksheet_users)
                 sheet = client.open_by_key(self.bot.gsheet.spreadsheet_id).worksheet(self.bot.gsheet.worksheet_users)
                 all_values = sheet.get_all_values()
                 if len(all_values) < 2: return
                 
-                for idx, row in enumerate(all_values):
-                    if len(row) > 2 and str(row[2]).strip() == unique_id:
-                        row_num = idx + 1
-                        sheet.update_cell(row_num, 3, discord_id) # C열(Discord_ID)
-                        sheet.update_cell(row_num, 4, "인증완료")   # D열(Auth_Status)
+                for idx, row in enumerate(all_values[1:], start=2):
+                    # A열(인덱스 0) = Unique_ID
+                    if len(row) > 0 and str(row[0]).strip().upper() == unique_id.upper():
+                        sheet.update_cell(idx, 3, discord_id)   # C열(col 3): Discord_ID
+                        sheet.update_cell(idx, 4, "인증완료")    # D열(col 4): Auth_Status
                         break
                         
             await loop.run_in_executor(None, _update)
-            log.info(f"☑️ 구글 시트 연동 완료: {unique_id} -> {discord_id}")
+            log.info(f"[Auth] 구글 시트 연동 완료: {unique_id} -> {discord_id}")
         except Exception as e:
-            log.error(f"❌ 구글 시트 인증 업데이트 실패: {e}")
+            log.error(f"[Auth] 구글 시트 인증 업데이트 실패: {e}")
 
     async def _grant_team_access(self, guild: discord.Guild, discord_id: str) -> list[str]:
         """DB를 확인하여 소속된 팀이 있다면 채널(텍스트/음성) 권한 부여"""
@@ -177,7 +187,7 @@ class AuthButtonView(discord.ui.View):
         super().__init__(timeout=None)
         self.bot = bot
 
-    @discord.ui.button(label="✅ 인증하기", style=discord.ButtonStyle.success, custom_id="persistent_auth_button_1")
+    @discord.ui.button(label="인증하기", style=discord.ButtonStyle.success, custom_id="auth_btn_v3")
     async def auth_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         # 버튼 클릭 시 모달 띄우기
         await interaction.response.send_modal(AuthModal(self.bot))
@@ -201,6 +211,19 @@ class AuthCog(commands.Cog):
         
         guild = self.bot.guilds[0] # 단일 서버 기준
         
+        # 미인증자 역할 자동 생성 로직 (없으면 생성)
+        unverified_role = discord.utils.get(guild.roles, name=UNVERIFIED_ROLE_NAME)
+        if not unverified_role:
+            try:
+                unverified_role = await guild.create_role(
+                    name=UNVERIFIED_ROLE_NAME,
+                    color=discord.Color.dark_grey(),
+                    reason="초기 셋업 자동 생성"
+                )
+                log.info(f"✨ '{UNVERIFIED_ROLE_NAME}' 역할을 생성했습니다.")
+            except Exception as e:
+                log.error(f"미인증자 역할 생성 실패: {e}")
+
         # 1. 채널 찾기 또는 생성
         channel = discord.utils.get(guild.text_channels, name=AUTH_CHANNEL_NAME)
         if not channel:
@@ -250,6 +273,19 @@ class AuthCog(commands.Cog):
             except Exception as e:
                 log.error(f"인증 튜토리얼 게시 실패: {e}")
 
+    @commands.Cog.listener()
+    async def on_member_join(self, member: discord.Member):
+        """새로운 멤버가 들어오면 무조건 '미인증자' 역할 부여"""
+        if member.bot:
+            return
+            
+        unverified_role = discord.utils.get(member.guild.roles, name=UNVERIFIED_ROLE_NAME)
+        if unverified_role:
+            try:
+                await member.add_roles(unverified_role)
+                log.info(f"👤 {member.name} 님에게 '{UNVERIFIED_ROLE_NAME}' 역할을 부여했습니다.")
+            except Exception as e:
+                log.error(f"미인증자 역할 부여 실패 ({member.name}): {e}")
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(AuthCog(bot))

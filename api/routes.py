@@ -93,9 +93,13 @@ async def api_apply(request: web.Request):
         }
         await bot.gsheet.record_application(sheet_data)
         
+        # 인증키 자동 생성 후 K열(인증키)에 저장
+        auth_key = await bot.gsheet.generate_link_code(unique_id)
+        
         return add_cors_headers(web.json_response({
             "success": True, 
-            "unique_id": unique_id
+            "unique_id": unique_id,
+            "auth_key": auth_key  # 웹사이트에서 이 키를 유저에게 보여주면 됨
         }))
         
     except Exception as e:

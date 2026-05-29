@@ -585,8 +585,8 @@ class GoogleSheetService:
 
     async def generate_link_code(self, unique_id: str) -> str | None:
         """
-        디스코드 연동용 1회용 코드 생성 (예: A7X9-B2) 후 회원_정보 탭에 저장.
-        반환: 생성된 코드 문자열 또는 None(실패)
+        통합_사용자_관리 탭의 해당 Unique_ID 행에 6자리 인증키를 생성하여 K열(인증키)에 저장.
+        행이 없으면 None 반환.
         """
         if not self._is_configured():
             return None
@@ -599,15 +599,16 @@ class GoogleSheetService:
             client = await loop.run_in_executor(None, self._get_client)
 
             def _update():
-                sheet = client.open_by_key(self.spreadsheet_id).worksheet(self.worksheet_members)
+                # 통합_사용자_관리 시트
+                sheet = client.open_by_key(self.spreadsheet_id).worksheet(self.worksheet_users)
                 all_values = sheet.get_all_values()
                 if len(all_values) < 2:
                     return False
-                for idx, row in enumerate(all_values):
-                    # Unique_ID는 C열 (인덱스 2)
-                    if len(row) > 2 and str(row[2]).strip() == unique_id:
-                        row_num = idx + 1
-                        sheet.update_cell(row_num, 5, code)   # E열: 연동_코드
+                # 1행(헤더) 제외
+                for idx, row in enumerate(all_values[1:], start=2):
+                    # A열(인덱스 0) = Unique_ID
+                    if len(row) > 0 and str(row[0]).strip().upper() == unique_id.upper():
+                        sheet.update_cell(idx, 11, code)  # K열(열 11): 인증키
                         return True
                 return False
 
@@ -619,7 +620,7 @@ class GoogleSheetService:
 
     async def verify_link_code(self, auth_input: str) -> str | None:
         """
-        입력한 auth_input이 회원_정보 시트의 Unique_ID 또는 연동_코드와 일치하는지 확인.
+        통합_사용자_관리 시트에서 auth_input이 Unique_ID(A열) 또는 인증키(K열)와 일치하는지 확인.
         일치하면 해당 행의 Unique_ID를 반환하고, 아니면 None을 반환.
         """
         if not self._is_configured():
@@ -630,17 +631,21 @@ class GoogleSheetService:
             client = await loop.run_in_executor(None, self._get_client)
 
             def _verify():
-                sheet = client.open_by_key(self.spreadsheet_id).worksheet(self.worksheet_members)
+                # 통합_사용자_관리 시트 사용
+                sheet = client.open_by_key(self.spreadsheet_id).worksheet(self.worksheet_users)
                 all_values = sheet.get_all_values()
                 if len(all_values) < 2:
                     return None
-                for row in all_values:
-                    # Unique_ID(C열=인덱스2), 연동_코드(E열=인덱스4)
-                    if len(row) > 2:
-                        uid = str(row[2]).strip()
-                        code = str(row[4]).strip() if len(row) > 4 else ""
+                # 1행(헤더) 제외하고 2행부터 순회
+                for row in all_values[1:]:
+                    # A(0):Unique_ID | B(1):역할_상태 | C(2):Discord_ID | D(3):Auth_Status
+                    # E(4):이름 | F(5):학번 | G(6):학과 | H(7):특기 | I(8):프로그램 | J(9):가입시간 | K(10):인증키
+                    if len(row) > 0:
+                        uid = str(row[0]).strip()
+                        code = str(row[10]).strip() if len(row) > 10 else ""
                         
-                        if auth_input == uid or auth_input == code:
+                        # 대소문자 구분 없이 비교
+                        if uid and (auth_input.upper() == uid.upper() or (code and auth_input.upper() == code.upper())):
                             return uid
                 return None
 

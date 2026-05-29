@@ -890,6 +890,9 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
 
 </main>
 <script>
+    // TODO: 배포 환경에 맞춰 아래 API 주소를 변경하세요. (예: ngrok 주소)
+    const API_BASE_URL = 'http://localhost:8080';
+
     // Navigation logic
     function navigate(pageId, options = {}) {
         // Hide all .page elements
@@ -1053,7 +1056,7 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
 
     async function loadPrograms() {
         try {
-            const res = await fetch('http://localhost:8080/api/activities');
+            const res = await fetch(API_BASE_URL + '/api/activities');
             const result = await res.json();
             if (result.success && result.data.length > 0) {
                 programsData = result.data;
@@ -1075,7 +1078,7 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
         if (!container) return;
         
         try {
-            const response = await fetch('http://localhost:8080/api/teams');
+            const response = await fetch(API_BASE_URL + '/api/teams');
             const result = await response.json();
             
             if (result.success && result.data.length > 0) {
@@ -1374,7 +1377,7 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
         };
 
         try {
-            const response = await fetch('http://localhost:8080/api/apply', {
+            const response = await fetch(API_BASE_URL + '/api/apply', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
@@ -1454,7 +1457,7 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
         };
 
         try {
-            const response = await fetch('http://localhost:8080/api/create_team', {
+            const response = await fetch(API_BASE_URL + '/api/create_team', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
@@ -1594,7 +1597,7 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
         };
         
         try {
-            const res = await fetch('http://localhost:8080/api/my-profile', {
+            const res = await fetch(API_BASE_URL + '/api/my-profile', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -1695,7 +1698,7 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
         }
         
         try {
-            const res = await fetch('http://localhost:8080/api/login', {
+            const res = await fetch(API_BASE_URL + '/api/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -1731,7 +1734,7 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
         const payload = { web_id: id, name: name, nickname: nickname, unique_id: key };
         
         try {
-            const res = await fetch('http://localhost:8080/api/signup', {
+            const res = await fetch(API_BASE_URL + '/api/signup', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)

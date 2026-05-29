@@ -617,6 +617,38 @@ class GoogleSheetService:
             log.error(f"[generate_link_code] 실패: {e}")
             return None
 
+    async def verify_link_code(self, auth_input: str) -> str | None:
+        """
+        입력한 auth_input이 회원_정보 시트의 Unique_ID 또는 연동_코드와 일치하는지 확인.
+        일치하면 해당 행의 Unique_ID를 반환하고, 아니면 None을 반환.
+        """
+        if not self._is_configured():
+            return None
+            
+        try:
+            loop = asyncio.get_running_loop()
+            client = await loop.run_in_executor(None, self._get_client)
+
+            def _verify():
+                sheet = client.open_by_key(self.spreadsheet_id).worksheet(self.worksheet_members)
+                all_values = sheet.get_all_values()
+                if len(all_values) < 2:
+                    return None
+                for row in all_values:
+                    # Unique_ID(C열=인덱스2), 연동_코드(E열=인덱스4)
+                    if len(row) > 2:
+                        uid = str(row[2]).strip()
+                        code = str(row[4]).strip() if len(row) > 4 else ""
+                        
+                        if auth_input == uid or auth_input == code:
+                            return uid
+                return None
+
+            return await loop.run_in_executor(None, _verify)
+        except Exception as e:
+            log.error(f"[verify_link_code] 실패: {e}")
+            return None
+
     # ══════════════════════════════════════════════════════════════
     #  Phase 1 - 매칭 결과 구글 시트 동기화
     # ══════════════════════════════════════════════════════════════

@@ -415,7 +415,10 @@ class MatchEngineCog(commands.Cog):
         if not self.bot.db:
             return
 
-        applicants = await self.bot.db.get_all_active_applications()
+        all_applicants = await self.bot.db.get_all_active_applications()
+        # 미인증 사용자(웹에서만 신청하고 아직 디스코드 연동 안 한 유저)는 매칭에서 제외
+        applicants = [app for app in all_applicants if not app["discord_id"].startswith("WEB_")]
+        
         if len(applicants) < Config.MIN_QUEUE_SIZE_FOR_MATCH:
             return
 
@@ -494,10 +497,12 @@ class MatchEngineCog(commands.Cog):
         await interaction.response.defer(ephemeral=False, thinking=True)
 
         act_id = activity_id if activity_id > 0 else None
-        applicants = await self.bot.db.get_all_active_applications(act_id)
+        all_applicants = await self.bot.db.get_all_active_applications(act_id)
+        # 미인증자 제외
+        applicants = [app for app in all_applicants if not app["discord_id"].startswith("WEB_")]
 
         if len(applicants) < 2:
-            await interaction.followup.send("⚠️ 매칭할 신청자가 부족합니다. (최소 2명 필요)")
+            await interaction.followup.send("⚠️ 매칭할 인증된 신청자가 부족합니다. (최소 2명 필요)")
             return
 
         team_objs = build_teams(applicants, team_size)
@@ -520,9 +525,11 @@ class MatchEngineCog(commands.Cog):
     @app_commands.default_permissions(administrator=True)
     async def list_queue(self, interaction: discord.Interaction) -> None:
         await interaction.response.defer(ephemeral=True)
-        applicants = await self.bot.db.get_all_active_applications()
+        all_applicants = await self.bot.db.get_all_active_applications()
+        applicants = [app for app in all_applicants if not app["discord_id"].startswith("WEB_")]
+        
         if not applicants:
-            await interaction.followup.send("📭 현재 대기자가 없습니다.")
+            await interaction.followup.send(f"📭 현재 대기자가 없습니다. (미인증 대기자: {len(all_applicants) - len(applicants)}명)")
             return
 
         p1_no, p1_l, p2_l, p3 = _classify(applicants)

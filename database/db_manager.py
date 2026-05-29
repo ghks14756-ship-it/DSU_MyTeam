@@ -3,10 +3,11 @@ database/db_manager.py
 SQLite 비동기 래퍼 (aiosqlite 사용)
 
 테이블 목록:
-  - applications   : 72시간 TTL 신청 데이터
-  - activities     : MYDEX 활동 목록 (구글 시트 캐시)
-  - team_rooms     : 조장이 생성한 팀 방
-  - group_invites  : 그룹 신청 초대 코드
+  - applications        : 최대 7일 TTL 신청 데이터 (매칭 우선순위 큐 지원)
+  - activities          : MYDEX 활동 목록 (구글 시트 캐시)
+  - team_rooms          : 조장이 생성한 팀 방
+  - group_invites       : 그룹 신청 초대 코드
+  - team_match_results  : 매칭 완료된 팀의 최종 정보 기록
 """
 
 import aiosqlite
@@ -37,29 +38,35 @@ class DatabaseManager:
     # ── 테이블 생성 ───────────────────────────────────────────────
     async def _create_tables(self) -> None:
         await self._conn.executescript("""
-            -- 신청 테이블 (핵심: 72시간 TTL)
+            -- 신청 테이블 (최대 7일 TTL, 매칭 우선순위 큐 지원)
             CREATE TABLE IF NOT EXISTS applications (
-                id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                discord_id  TEXT NOT NULL,            -- 디스코드 유저 ID
-                username    TEXT NOT NULL,            -- 닉네임
-                student_id  TEXT NOT NULL,            -- 학번 (ex: 21011234)
-                department  TEXT NOT NULL,            -- 학과
-                skill       TEXT NOT NULL,            -- 특기/역할
-                activity_id INTEGER,                  -- 신청한 활동 ID (FK)
-                group_code  TEXT DEFAULT NULL,        -- 그룹 초대 코드 (그룹 신청 시)
-                applied_at  TEXT NOT NULL,            -- 신청 시각 (ISO8601 UTC)
-                expires_at  TEXT NOT NULL,            -- 만료 시각 (72h 후)
-                is_matched  INTEGER DEFAULT 0,        -- 매칭 완료 여부
-                team_id     INTEGER DEFAULT NULL,     -- 배정된 팀 ID
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                discord_id      TEXT NOT NULL,
+                username        TEXT NOT NULL,
+                student_id      TEXT NOT NULL,
+                department      TEXT NOT NULL,
+                skill           TEXT NOT NULL,
+                activity_id     INTEGER,
+                group_code      TEXT DEFAULT NULL,
+                applied_at      TEXT NOT NULL,            -- 신청 시각 (ISO8601 UTC)
+                expires_at      TEXT NOT NULL,            -- 만료 시각 (7일 후)
+                is_matched      INTEGER DEFAULT 0,
+                team_id         INTEGER DEFAULT NULL,
+                contact         TEXT DEFAULT '',           -- 연락 수단 (DM 교차 발송용)
+                weekly_schedule TEXT DEFAULT '',           -- 주간 스케줄 (팀 리포트용)
+                has_conditions  INTEGER DEFAULT 0,         -- 희망 조건 여부 (0=없음, 1=있음)
+                conditions      TEXT DEFAULT '[]',         -- JSON 배열: 희망 조건 목록
+                is_leader       INTEGER DEFAULT 0,         -- 팀장 권한 여부 (3일 후 승급 가능)
+                day3_dm_sent    INTEGER DEFAULT 0,         -- 3일차 DM 발송 여부
                 FOREIGN KEY (activity_id) REFERENCES activities(id)
             );
 
             -- MYDEX 활동 목록 (구글 시트 캐시)
             CREATE TABLE IF NOT EXISTS activities (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                name        TEXT NOT NULL UNIQUE,     -- 활동명
+                name        TEXT NOT NULL UNIQUE,
                 description TEXT DEFAULT '',
-                deadline    TEXT DEFAULT NULL,         -- 마감일 (ISO8601)
+                deadline    TEXT DEFAULT NULL,
                 max_members INTEGER DEFAULT 0,
                 is_active   INTEGER DEFAULT 1,
                 updated_at  TEXT NOT NULL
@@ -67,31 +74,57 @@ class DatabaseManager:
 
             -- 팀 방 테이블
             CREATE TABLE IF NOT EXISTS team_rooms (
-                id              INTEGER PRIMARY KEY AUTOINCREMENT,
-                activity_id     INTEGER,
-                leader_id       TEXT NOT NULL,         -- 조장 디스코드 ID
-                team_name       TEXT NOT NULL,
-                required_skills TEXT DEFAULT '[]',     -- JSON 배열
-                max_members     INTEGER DEFAULT 4,
-                current_members INTEGER DEFAULT 1,
-                text_channel_id TEXT DEFAULT NULL,     -- 생성된 채팅방 ID
-                voice_channel_id TEXT DEFAULT NULL,    -- 생성된 음성방 ID
-                created_at      TEXT NOT NULL,
-                is_full         INTEGER DEFAULT 0,
+                id               INTEGER PRIMARY KEY AUTOINCREMENT,
+                activity_id      INTEGER,
+                leader_id        TEXT NOT NULL,
+                team_name        TEXT NOT NULL,
+                required_skills  TEXT DEFAULT '[]',
+                max_members      INTEGER DEFAULT 4,
+                current_members  INTEGER DEFAULT 1,
+                text_channel_id  TEXT DEFAULT NULL,
+                voice_channel_id TEXT DEFAULT NULL,
+                created_at       TEXT NOT NULL,
+                is_full          INTEGER DEFAULT 0,
                 FOREIGN KEY (activity_id) REFERENCES activities(id)
             );
 
             -- 그룹 초대 코드 테이블
             CREATE TABLE IF NOT EXISTS group_invites (
-                code        TEXT PRIMARY KEY,          -- 6자리 초대 코드
-                creator_id  TEXT NOT NULL,             -- 코드 생성자 ID
+                code        TEXT PRIMARY KEY,
+                creator_id  TEXT NOT NULL,
                 activity_id INTEGER,
-                members     TEXT DEFAULT '[]',         -- JSON 배열 (discord_id 목록)
+                members     TEXT DEFAULT '[]',
                 created_at  TEXT NOT NULL,
-                expires_at  TEXT NOT NULL,             -- 코드 유효 기간 (72h)
+                expires_at  TEXT NOT NULL,
                 is_used     INTEGER DEFAULT 0
             );
+
+            -- 매칭 완료 팀 결과 기록 (구글 시트 동기화 + 팀 리포트용)
+            CREATE TABLE IF NOT EXISTS team_match_results (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                team_id      INTEGER NOT NULL,
+                activity_id  INTEGER,
+                members_json TEXT NOT NULL,  -- JSON: [{discord_id, username, skill, contact, schedule}, ...]
+                leader_id    TEXT NOT NULL,  -- 팀장 discord_id
+                matched_at   TEXT NOT NULL,
+                channel_id   TEXT DEFAULT NULL,
+                synced_sheet INTEGER DEFAULT 0  -- 구글 시트 동기화 완료 여부
+            );
         """)
+        # 기존 테이블에 신규 컬럼 추가 (ALTER TABLE, 이미 존재해도 에러 무시)
+        alter_stmts = [
+            "ALTER TABLE applications ADD COLUMN contact TEXT DEFAULT ''",
+            "ALTER TABLE applications ADD COLUMN weekly_schedule TEXT DEFAULT ''",
+            "ALTER TABLE applications ADD COLUMN has_conditions INTEGER DEFAULT 0",
+            "ALTER TABLE applications ADD COLUMN conditions TEXT DEFAULT '[]'",
+            "ALTER TABLE applications ADD COLUMN is_leader INTEGER DEFAULT 0",
+            "ALTER TABLE applications ADD COLUMN day3_dm_sent INTEGER DEFAULT 0",
+        ]
+        for stmt in alter_stmts:
+            try:
+                await self._conn.execute(stmt)
+            except Exception:
+                pass  # 이미 컬럼이 존재하면 무시
         await self._conn.commit()
         log.info("DB 테이블 생성/확인 완료")
 
@@ -108,6 +141,10 @@ class DatabaseManager:
         skill: str,
         activity_id: int | None = None,
         group_code: str | None = None,
+        contact: str = "",
+        weekly_schedule: str = "",
+        has_conditions: bool = False,
+        conditions: list | None = None,
     ) -> dict:
         """
         신청 데이터를 DB에 저장 (1인 1신청 중복 방지 로직 포함).
@@ -126,17 +163,22 @@ class DatabaseManager:
                 if existing:
                     raise ValueError("이미 대기 중인 신청 내역이 존재합니다.")
 
-        expires = now + timedelta(hours=72)
+        import json
+        expires = now + timedelta(hours=Config.APPLICATION_TTL_HOURS)
+        cond_json = json.dumps(conditions or [], ensure_ascii=False)
 
         await self._conn.execute("""
             INSERT INTO applications
                 (discord_id, username, student_id, department, skill,
-                 activity_id, group_code, applied_at, expires_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 activity_id, group_code, applied_at, expires_at,
+                 contact, weekly_schedule, has_conditions, conditions)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             discord_id, username, student_id, department, skill,
             activity_id, group_code,
-            now.isoformat(), expires.isoformat()
+            now.isoformat(), expires.isoformat(),
+            contact, weekly_schedule,
+            1 if has_conditions else 0, cond_json
         ))
         await self._conn.commit()
 
@@ -203,6 +245,78 @@ class DatabaseManager:
                 (team_id, discord_id)
             )
         await self._conn.commit()
+
+    async def promote_to_leader(self, discord_id: str) -> bool:
+        """3일 경과 시 유저를 팀장으로 승급 + 조건 초기화."""
+        await self._conn.execute("""
+            UPDATE applications
+            SET is_leader = 1, has_conditions = 0, conditions = '[]'
+            WHERE discord_id = ? AND is_matched = 0
+        """, (discord_id,))
+        await self._conn.commit()
+        async with self._conn.execute(
+            "SELECT changes() as cnt"
+        ) as cur:
+            row = await cur.fetchone()
+            return bool(row and row["cnt"] > 0)
+
+    async def mark_day3_dm_sent(self, discord_id: str) -> None:
+        """3일차 DM 발송 완료 표시."""
+        await self._conn.execute(
+            "UPDATE applications SET day3_dm_sent = 1 WHERE discord_id = ? AND is_matched = 0",
+            (discord_id,)
+        )
+        await self._conn.commit()
+
+    async def get_day3_pending(self) -> list[dict]:
+        """3일 이상 경과했으나 DM을 아직 보내지 않은 대기자 목록."""
+        from datetime import timedelta
+        threshold = (datetime.now(timezone.utc) - timedelta(hours=72)).isoformat()
+        async with self._conn.execute("""
+            SELECT * FROM applications
+            WHERE is_matched = 0
+              AND day3_dm_sent = 0
+              AND applied_at <= ?
+              AND expires_at > ?
+        """, (threshold, datetime.now(timezone.utc).isoformat())) as cursor:
+            rows = await cursor.fetchall()
+            return [dict(r) for r in rows]
+
+    async def save_team_match_result(
+        self,
+        team_id: int,
+        activity_id: int | None,
+        leader_id: str,
+        members: list[dict],
+        channel_id: str | None = None,
+    ) -> int:
+        """매칭 완료된 팀 결과를 team_match_results 테이블에 저장. ID 반환."""
+        import json
+        now = datetime.now(timezone.utc).isoformat()
+        cursor = await self._conn.execute("""
+            INSERT INTO team_match_results
+                (team_id, activity_id, members_json, leader_id, matched_at, channel_id)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (team_id, activity_id, json.dumps(members, ensure_ascii=False),
+               leader_id, now, channel_id))
+        await self._conn.commit()
+        return cursor.lastrowid
+
+    async def mark_sheet_synced(self, result_id: int) -> None:
+        """구글 시트 동기화 완료 표시."""
+        await self._conn.execute(
+            "UPDATE team_match_results SET synced_sheet = 1 WHERE id = ?",
+            (result_id,)
+        )
+        await self._conn.commit()
+
+    async def get_unsynced_results(self) -> list[dict]:
+        """구글 시트에 아직 반영되지 않은 매칭 결과 목록."""
+        async with self._conn.execute(
+            "SELECT * FROM team_match_results WHERE synced_sheet = 0"
+        ) as cursor:
+            rows = await cursor.fetchall()
+            return [dict(r) for r in rows]
 
     async def sync_applications_from_sheet(self, applications: list[dict]) -> int:
         """구글 시트의 '신청현황' 데이터를 DB와 동기화 (Upsert)"""

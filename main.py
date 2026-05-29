@@ -103,7 +103,7 @@ class DSUMyTeamBot(commands.Bot):
             "menu",           # 카드 버튼 메인 메뉴 (/메뉴, /공지메뉴)
             "application",    # /신청 명령어 + Modal + 특기 카드 Select
             "team_room",      # 조장 방 생성 + AI 리포트
-            "random_match",   # 랜덤 매칭
+            "random_match",   # 매칭 엔진 v2 (이벤트 드리븐 + 우선순위 큐)
             "group_apply",    # 그룹 신청 (초대코드)
             "admin",          # /최신화 등 관리자 명령어
             "auth",           # 고유 ID 인증

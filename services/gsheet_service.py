@@ -616,3 +616,103 @@ class GoogleSheetService:
         except Exception as e:
             log.error(f"[generate_link_code] 실패: {e}")
             return None
+
+    # ══════════════════════════════════════════════════════════════
+    #  Phase 1 - 매칭 결과 구글 시트 동기화
+    # ══════════════════════════════════════════════════════════════
+
+    async def update_match_status(
+        self,
+        unique_ids: list[str],
+        status: str = "매칭완료",
+    ) -> bool:
+        """
+        매칭 완료 시 매칭_대기_라인의 Match_Status를 일괄 갱신.
+        unique_ids: 매칭된 유저들의 Unique_ID 목록
+        status: '매칭완료' | '대기' 등
+        """
+        if not self._is_configured():
+            return False
+        try:
+            loop = asyncio.get_running_loop()
+            client = await loop.run_in_executor(None, self._get_client)
+
+            def _update():
+                sheet = client.open_by_key(self.spreadsheet_id).worksheet(self.worksheet_waiting)
+                all_values = sheet.get_all_values()
+                if len(all_values) < 2:
+                    return False
+                header = all_values[0]
+                try:
+                    uid_col = header.index("Unique_ID") + 1
+                    status_col = header.index("Match_Status") + 1
+                except ValueError:
+                    uid_col, status_col = 1, 9  # fallback
+
+                updated = 0
+                for i, row in enumerate(all_values[1:], start=2):
+                    if len(row) >= uid_col and str(row[uid_col - 1]).strip() in unique_ids:
+                        sheet.update_cell(i, status_col, status)
+                        updated += 1
+                return updated > 0
+
+            return await loop.run_in_executor(None, _update)
+        except Exception as e:
+            log.error(f"[update_match_status] 실패: {e}")
+            return False
+
+    async def record_team_result(self, team_data: dict) -> bool:
+        """
+        매칭 완료된 팀 정보를 팀_관리_라인에 기록.
+        team_data 키:
+          team_id, leader_unique_id, leader_name, department, program,
+          summary, description, current_members, target_members, team_status
+        """
+        if not self._is_configured():
+            return False
+        try:
+            loop = asyncio.get_running_loop()
+            client = await loop.run_in_executor(None, self._get_client)
+            now = datetime.now(timezone.utc).isoformat()
+
+            team_row = [
+                team_data.get("team_id", ""),
+                team_data.get("leader_unique_id", ""),
+                team_data.get("leader_name", ""),
+                team_data.get("department", ""),
+                team_data.get("program", ""),
+                team_data.get("summary", "자동 매칭"),
+                team_data.get("description", ""),
+                team_data.get("current_members", 1),
+                team_data.get("target_members", 4),
+                team_data.get("team_status", "결성완료"),
+                now,
+            ]
+
+            def _append():
+                sheet = client.open_by_key(self.spreadsheet_id).worksheet(self.worksheet_team_line)
+                sheet.append_row(team_row)
+                return True
+
+            return await loop.run_in_executor(None, _append)
+        except Exception as e:
+            log.error(f"[record_team_result] 실패: {e}")
+            return False
+
+    def build_team_report(self, members: list[dict]) -> str:
+        """
+        매칭 완료 후 팀 채널에 게시할 팀 리포트 텍스트 생성.
+        스케줄/연락처는 매칭 알고리즘이 아닌 리포트에만 사용한다 (기획 확정).
+        members: [{username, department, skill, contact, weekly_schedule}, ...]
+        """
+        lines = ["📋 **팀 구성 리포트**\n"]
+        for i, m in enumerate(members, start=1):
+            schedule_str = m.get("weekly_schedule", "") or "미기재"
+            contact_str = m.get("contact", "") or "미기재"
+            lines.append(
+                f"**{i}. {m.get('username', '?')}** ({m.get('department', '?')})\n"
+                f"   🔧 특기: {m.get('skill', '?')}\n"
+                f"   📅 활동 가능 시간: {schedule_str}\n"
+                f"   📞 연락 수단: {contact_str}"
+            )
+        return "\n\n".join(lines)

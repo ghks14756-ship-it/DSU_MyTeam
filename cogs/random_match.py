@@ -174,38 +174,110 @@ async def _create_private_channel(
     members: list[dict],
     bot,
 ) -> tuple[discord.TextChannel | None, discord.VoiceChannel | None]:
-    """팀원만 볼 수 있는 비공개 채널 생성."""
+    """
+    매칭 완료된 팀원만 접근할 수 있는 비공개 채널 동적 생성.
+
+    권한 원칙:
+    - @everyone: view_channel=False (완전 비공개)
+    - 봇(자기 자신): 채널 관리 권한 (채널 삭제/이름 변경 등)
+    - 팀원 각각: view_channel=True + 메시지/음성 권한만
+    - 관리자 역할 보유자: 서버 수준 administrator 권한으로 자동 접근 가능 (별도 오버라이드 불필요)
+    """
+    # 카테고리 조회 또는 생성
     category = discord.utils.get(guild.categories, name=Config.TEAM_CATEGORY_NAME)
     if category is None:
-        category = await guild.create_category(Config.TEAM_CATEGORY_NAME)
+        # 카테고리 자체도 @everyone 비공개로 생성
+        cat_overwrites = {
+            guild.default_role: discord.PermissionOverwrite(view_channel=False),
+            guild.me: discord.PermissionOverwrite(
+                view_channel=True,
+                manage_channels=True,
+                manage_messages=True,
+            ),
+        }
+        try:
+            category = await guild.create_category(
+                Config.TEAM_CATEGORY_NAME,
+                overwrites=cat_overwrites,
+            )
+            log.info(f"📁 팀룸 카테고리 '{Config.TEAM_CATEGORY_NAME}' 생성 완료 (@everyone 비공개)")
+        except Exception as e:
+            log.error(f"카테고리 생성 실패: {e}")
+            category = None
 
-    # 기본 비공개 + 팀원 개별 열람 허용
-    overwrites = {guild.default_role: discord.PermissionOverwrite(view_channel=False)}
+    # ── 권한 오버라이드 구성 ────────────────────────────────────────────────
+    overwrites: dict[discord.Role | discord.Member, discord.PermissionOverwrite] = {
+        # @everyone: 완전 차단
+        guild.default_role: discord.PermissionOverwrite(
+            view_channel=False,
+            send_messages=False,
+            connect=False,
+        ),
+        # 봇: 채널 전권 (리포트 게시, 핀, 채널 관리)
+        guild.me: discord.PermissionOverwrite(
+            view_channel=True,
+            send_messages=True,
+            read_message_history=True,
+            manage_messages=True,
+            manage_channels=True,
+            connect=True,
+            speak=True,
+        ),
+    }
+
+    # 팀원 각각에게 최소 접근 권한 부여
     for m in members:
         try:
-            member_obj = guild.get_member(int(m["discord_id"])) or \
-                         await guild.fetch_member(int(m["discord_id"]))
-            overwrites[member_obj] = discord.PermissionOverwrite(
-                view_channel=True, send_messages=True, read_message_history=True
+            member_obj = (
+                guild.get_member(int(m["discord_id"]))
+                or await guild.fetch_member(int(m["discord_id"]))
             )
-        except Exception:
-            pass
+            overwrites[member_obj] = discord.PermissionOverwrite(
+                view_channel=True,
+                send_messages=True,
+                read_message_history=True,
+                attach_files=True,
+                embed_links=True,
+                add_reactions=True,
+                connect=True,
+                speak=True,
+            )
+            log.debug(f"  팀원 권한 추가: {member_obj.display_name}")
+        except discord.NotFound:
+            log.warning(f"  팀원 조회 실패 (서버 미입장 상태): discord_id={m['discord_id']}")
+        except Exception as e:
+            log.warning(f"  팀원 권한 설정 실패 [{m['discord_id']}]: {e}")
 
+    # ── 텍스트 / 음성 채널 생성 ────────────────────────────────────────────
     try:
         text_ch = await guild.create_text_channel(
             f"{Config.TEAM_TEXT_CHANNEL_PREFIX}-{team_id}",
             category=category,
             overwrites=overwrites,
+            topic=f"팀 {team_id} 전용 채팅 채널 | 팀원 외 접근 불가",
         )
         voice_ch = await guild.create_voice_channel(
             f"{Config.TEAM_VOICE_CHANNEL_PREFIX}-{team_id}",
             category=category,
             overwrites=overwrites,
         )
+        log.info(
+            f"🔒 팀 {team_id} 비공개 채널 생성 완료: "
+            f"#{text_ch.name} / {voice_ch.name} "
+            f"(팀원 {len(members)}명 개별 권한 부여)"
+        )
         return text_ch, voice_ch
+    except discord.Forbidden:
+        log.error(
+            "채널 생성 실패 (Forbidden): 봇에 '채널 관리' 권한이 없거나 "
+            f"카테고리 '{Config.TEAM_CATEGORY_NAME}'에 대한 권한이 없습니다."
+        )
+        return None, None
     except Exception as e:
         log.error(f"채널 생성 실패: {e}")
         return None, None
+
+
 
 
 async def _send_cross_dms(
@@ -215,6 +287,7 @@ async def _send_cross_dms(
     text_ch: discord.TextChannel | None,
     voice_ch: discord.VoiceChannel | None,
     team_idx: int,
+    cached_sheets: dict | None = None,
 ) -> None:
     """
     매칭 완료 교차 DM 발송.
@@ -229,6 +302,34 @@ async def _send_cross_dms(
     if not channel_info:
         channel_info = f"\n📌 팀 번호: {team_idx} (채널 생성 실패 시 관리자에게 문의)"
 
+    if bot.gsheet and cached_sheets is None:
+        cached_sheets = await bot.gsheet.get_cached_sheets()
+
+    def _get_member_info(m):
+        d_id = m.get("discord_id", "")
+        is_ldr = bool(m.get("is_leader", 0))
+        
+        if bot.gsheet and cached_sheets:
+            name = bot.gsheet.get_fallback_data(cached_sheets, discord_id=d_id, field="이름", is_leader=is_ldr)
+            dept = bot.gsheet.get_fallback_data(cached_sheets, discord_id=d_id, field="학과", is_ldr=is_ldr)
+            skill = bot.gsheet.get_fallback_data(cached_sheets, discord_id=d_id, field="특기", is_ldr=is_ldr)
+            schedule = bot.gsheet.get_fallback_data(cached_sheets, discord_id=d_id, field="주간_시간표", is_ldr=is_ldr)
+            contact = bot.gsheet.get_fallback_data(cached_sheets, discord_id=d_id, field="연락수단", is_ldr=is_ldr)
+            student_id = bot.gsheet.get_fallback_data(cached_sheets, discord_id=d_id, field="학번", is_ldr=is_ldr)
+            if student_id != "미기재" and len(student_id) > 4:
+                student_id = student_id[:4] + "*" * (len(student_id) - 4)
+            else:
+                student_id = student_id if student_id != "미기재" else "미기재"
+        else:
+            name = m.get('username', '?')
+            dept = m.get('department', '?')
+            skill = m.get('skill', '?')
+            schedule = m.get('weekly_schedule', '') or "미기재"
+            contact = m.get('contact', '') or "미기재"
+            student_id = "미기재"
+
+        return name, dept, skill, schedule, contact, student_id
+
     non_leaders = [m for m in members if m["discord_id"] != leader["discord_id"]]
 
     # 팀장에게: 팀원들의 정보 전달
@@ -240,11 +341,13 @@ async def _send_cross_dms(
             color=discord.Color.from_rgb(88, 101, 242),
         )
         for m in non_leaders:
+            name, dept, skill, schedule, contact, student_id = _get_member_info(m)
             embed_to_leader.add_field(
-                name=f"👤 {m.get('username', '?')} ({m.get('department', '?')})",
+                name=f"👤 {name} ({dept} / 학번: {student_id})",
                 value=(
-                    f"🔧 특기: {m.get('skill', '?')}\n"
-                    f"📞 연락처: {m.get('contact', '미기재') or '미기재'}"
+                    f"🔧 특기: {skill}\n"
+                    f"📅 활동 가능 시간: {schedule}\n"
+                    f"📞 연락 수단: {contact}"
                 ),
                 inline=False,
             )
@@ -261,19 +364,30 @@ async def _send_cross_dms(
                 description=f"팀에 배정되었습니다.{channel_info}",
                 color=discord.Color.green(),
             )
+            
+            # 팀장 정보 추가
+            lname, ldept, lskill, lschedule, lcontact, lstudent_id = _get_member_info(leader)
             embed_to_member.add_field(
-                name=f"👑 팀장: {leader.get('username', '?')} ({leader.get('department', '?')})",
+                name=f"👑 팀장: {lname} ({ldept} / 학번: {lstudent_id})",
                 value=(
-                    f"🔧 특기: {leader.get('skill', '?')}\n"
-                    f"📞 연락처: {leader.get('contact', '미기재') or '미기재'}"
+                    f"🔧 특기: {lskill}\n"
+                    f"📅 활동 가능 시간: {lschedule}\n"
+                    f"📞 연락 수단: {lcontact}"
                 ),
                 inline=False,
             )
+            
+            # 다른 팀원 정보 추가
             other_members = [m for m in non_leaders if m["discord_id"] != member["discord_id"]]
             for m in other_members:
+                oname, odept, oskill, oschedule, ocontact, ostudent_id = _get_member_info(m)
                 embed_to_member.add_field(
-                    name=f"👤 {m.get('username', '?')} ({m.get('department', '?')})",
-                    value=f"🔧 특기: {m.get('skill', '?')}\n📞 연락처: {m.get('contact', '미기재') or '미기재'}",
+                    name=f"👤 {oname} ({odept} / 학번: {ostudent_id})",
+                    value=(
+                        f"🔧 특기: {oskill}\n"
+                        f"📅 활동 가능 시간: {oschedule}\n"
+                        f"📞 연락 수단: {ocontact}"
+                    ),
                     inline=False,
                 )
             await member_user.send(embed=embed_to_member)
@@ -324,7 +438,8 @@ async def execute_match_for_teams(
 
         # 3) 팀 리포트 채널에 게시
         if text_ch and bot.gsheet:
-            report_text = bot.gsheet.build_team_report(members)
+            cached_sheets = await bot.gsheet.get_cached_sheets()
+            report_text = bot.gsheet.build_team_report(members, cached_sheets)
             try:
                 msg = await text_ch.send(report_text)
                 await msg.pin()
@@ -345,7 +460,7 @@ async def execute_match_for_teams(
         )
 
         # 6) 교차 DM 발송
-        await _send_cross_dms(bot, leader, members, text_ch, voice_ch, idx)
+        await _send_cross_dms(bot, leader, members, text_ch, voice_ch, idx, cached_sheets=cached_sheets if 'cached_sheets' in locals() else None)
 
         # 7) 구글 시트 동기화 (백그라운드)
         if bot.gsheet:
@@ -486,7 +601,7 @@ class MatchEngineCog(commands.Cog):
     @app_commands.default_permissions(administrator=True)
     @app_commands.describe(
         activity_id="대상 활동 ID (0 = 전체)",
-        team_size="팀 인원 (기본 4명)",
+        team_size="팀 인원 (기본 2명)",
     )
     async def random_match(
         self,

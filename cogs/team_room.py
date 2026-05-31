@@ -230,9 +230,25 @@ class TeamRoomPickView(discord.ui.View):
                 return
 
         # 채널 생성 로직
+        # 카테고리 조회 또는 생성 (@everyone 비공개)
         category = discord.utils.get(guild.categories, name=Config.TEAM_CATEGORY_NAME)
         if category is None:
-            category = await guild.create_category(Config.TEAM_CATEGORY_NAME)
+            cat_overwrites = {
+                guild.default_role: discord.PermissionOverwrite(view_channel=False),
+                guild.me: discord.PermissionOverwrite(
+                    view_channel=True,
+                    manage_channels=True,
+                    manage_messages=True,
+                ),
+            }
+            try:
+                category = await guild.create_category(
+                    Config.TEAM_CATEGORY_NAME,
+                    overwrites=cat_overwrites,
+                )
+            except Exception as e:
+                await interaction.followup.send(f"❌ 카테고리 생성 실패: {e}", ephemeral=True)
+                return
 
         members_to_invite = []
         for app in valid_apps:
@@ -242,12 +258,47 @@ class TeamRoomPickView(discord.ui.View):
             except Exception:
                 pass
 
+        # ── 권한 오버라이드 ─────────────────────────────────────────────────
         overwrites: dict[discord.Role | discord.Member, discord.PermissionOverwrite] = {
-            guild.default_role: discord.PermissionOverwrite(view_channel=False),
-            interaction.user: discord.PermissionOverwrite(view_channel=True, manage_channels=True),
+            # @everyone: 완전 차단
+            guild.default_role: discord.PermissionOverwrite(
+                view_channel=False,
+                send_messages=False,
+                connect=False,
+            ),
+            # 봇: 채널 관리 전권
+            guild.me: discord.PermissionOverwrite(
+                view_channel=True,
+                send_messages=True,
+                read_message_history=True,
+                manage_messages=True,
+                manage_channels=True,
+                connect=True,
+                speak=True,
+            ),
+            # 조장: 채팅방 관리 권한
+            interaction.user: discord.PermissionOverwrite(
+                view_channel=True,
+                send_messages=True,
+                read_message_history=True,
+                manage_messages=True,
+                connect=True,
+                speak=True,
+            ),
         }
+        # 팀원: 최소 접근 권한
         for m in members_to_invite:
-            overwrites[m] = discord.PermissionOverwrite(view_channel=True)
+            overwrites[m] = discord.PermissionOverwrite(
+                view_channel=True,
+                send_messages=True,
+                read_message_history=True,
+                attach_files=True,
+                embed_links=True,
+                add_reactions=True,
+                connect=True,
+                speak=True,
+            )
+
 
         try:
             text_ch = await guild.create_text_channel(

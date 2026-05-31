@@ -76,9 +76,10 @@ class DSUMyTeamBot(commands.Bot):
         # 3. Cog(기능 모듈) 로드
         await self._load_cogs()
 
-        # 4. 슬래시 커맨드 전역 동기화
+        # 4. 슬래시 커맨드 동기화
+        # 전역 sync (배포용, 최대 1시간 딜레이)
         synced = await self.tree.sync()
-        log.info(f"✅ 슬래시 커맨드 동기화 완료: {len(synced)}개")
+        log.info(f"✅ 슬래시 커맨드 전역 동기화 완료: {len(synced)}개")
 
         # 5. 웹 API 서버 구동 (aiohttp)
         try:
@@ -124,6 +125,15 @@ class DSUMyTeamBot(commands.Bot):
                 name="팀 매칭 대기 중 👀",
             )
         )
+
+        # 길드(서버) 단위 즉시 동기화 — 새 명령어가 수 초 내 채팅 목록에 표시됨
+        for guild in self.guilds:
+            try:
+                self.tree.copy_global_to(guild=guild)
+                guild_synced = await self.tree.sync(guild=guild)
+                log.info(f"✅ [{guild.name}] 길드 명령어 즉시 동기화: {len(guild_synced)}개")
+            except Exception as e:
+                log.error(f"❌ [{guild.name}] 길드 명령어 동기화 실패: {e}")
 
     async def on_command_error(self, ctx, error) -> None:
         if isinstance(error, commands.CommandNotFound):

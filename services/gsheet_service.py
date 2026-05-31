@@ -50,6 +50,81 @@ class GoogleSheetService:
         """구글 시트 연동이 설정되어 있는지 확인."""
         return bool(self.spreadsheet_id and self.spreadsheet_id != "YOUR_SPREADSHEET_ID_HERE")
 
+    async def get_cached_sheets(self) -> dict:
+        """Fallback Search를 위해 주요 시트 데이터를 일괄 캐싱."""
+        if not self._is_configured():
+            return {}
+        loop = asyncio.get_running_loop()
+        client = await loop.run_in_executor(None, self._get_client)
+        def _fetch():
+            doc = client.open_by_key(self.spreadsheet_id)
+            return {
+                "users": doc.worksheet(self.worksheet_users).get_all_records(),
+                "waiting": doc.worksheet(self.worksheet_waiting).get_all_records(),
+                "team_line": doc.worksheet(self.worksheet_team_line).get_all_records(),
+                "members": doc.worksheet(self.worksheet_members).get_all_records()
+            }
+        try:
+            return await loop.run_in_executor(None, _fetch)
+        except Exception as e:
+            log.error(f"[get_cached_sheets] 일괄 캐싱 실패: {e}")
+            return {}
+
+    def get_fallback_data(self, cached_sheets: dict, discord_id: str = None, unique_id: str = None, field: str = "", is_leader: bool = False) -> str:
+        """역할에 따른 순차적 조건부 조회 (Fallback Search) 로직"""
+        # 1. Unique_ID 찾기 (통합_사용자_관리 -> 회원_정보 순)
+        if not unique_id and discord_id:
+            for r in cached_sheets.get("users", []):
+                if str(r.get("Discord_ID", "")).strip() == discord_id:
+                    unique_id = str(r.get("Unique_ID", "")).strip()
+                    break
+            if not unique_id:
+                for r in cached_sheets.get("members", []):
+                    if str(r.get("Discord_ID", "")).strip() == discord_id:
+                        unique_id = str(r.get("Unique_ID", "")).strip()
+                        break
+        
+        if not unique_id:
+            return "미기재"
+
+        # 2. 역할에 따른 시트 탐색 순서 (1순위 -> 2순위 -> 3순위)
+        if is_leader:
+            order = [
+                ("team_line", "Leader_Unique_ID"),
+                ("users", "Unique_ID"),
+                ("members", "Unique_ID")
+            ]
+        else:
+            order = [
+                ("waiting", "Unique_ID"),
+                ("users", "Unique_ID"),
+                ("members", "Unique_ID")
+            ]
+
+        # 3. 논리적 필드명에 해당하는 실제 시트 컬럼명 매핑 (우선순위 순)
+        field_map = {
+            "이름": ["이름", "팀장_이름", "닉네임"],
+            "학번": ["학번"],
+            "학과": ["학과", "팀장_학과"],
+            "특기": ["전문분야_특기"],
+            "연락수단": ["연락수단", "이메일"],
+            "주간_시간표": ["주간_활동_가능_시간"]
+        }
+        possible_cols = field_map.get(field, [field])
+
+        # 4. 순차적 조회 (Fallback)
+        for sheet_name, uid_col in order:
+            sheet_data = cached_sheets.get(sheet_name, [])
+            row = next((r for r in sheet_data if str(r.get(uid_col, "")).strip() == unique_id), None)
+            if row:
+                for col in possible_cols:
+                    if col in row:
+                        val = str(row.get(col, "")).strip()
+                        if val and val.lower() != "none" and val != "":
+                            return val
+
+        return "미기재"
+
     # ══════════════════════════════════════════════════════════════
     #  프로그램 (활동_프로그램_관리)
     # ══════════════════════════════════════════════════════════════
@@ -654,33 +729,54 @@ class GoogleSheetService:
 
     async def verify_link_code(self, auth_input: str) -> str | None:
         """
-        통합_사용자_관리 시트에서 auth_input이 Unique_ID(A열) 또는 인증키(K열)와 일치하는지 확인.
-        일치하면 해당 행의 Unique_ID를 반환하고, 아니면 None을 반환.
+        디스코드 인증 시 auth_input 검증 (2단계 조회).
+
+        1단계: 통합_사용자_관리 시트에서 Unique_ID(A열) 또는 인증키(K열) 일치 확인
+        2단계: 1단계 실패 시 회원_정보 시트에서 Web_ID(A열) 일치 → 매핑된 Unique_ID(C열) 반환
+
+        이를 통해 사용자가 Web_ID(웹 아이디), Unique_ID(DUS-...), 인증키(6자리) 중
+        어느 것으로든 디스코드 인증을 통과할 수 있다.
         """
         if not self._is_configured():
             return None
-            
+
         try:
             loop = asyncio.get_running_loop()
             client = await loop.run_in_executor(None, self._get_client)
 
             def _verify():
-                # 통합_사용자_관리 시트 사용
-                sheet = client.open_by_key(self.spreadsheet_id).worksheet(self.worksheet_users)
-                all_values = sheet.get_all_values()
-                if len(all_values) < 2:
-                    return None
-                # 1행(헤더) 제외하고 2행부터 순회
-                for row in all_values[1:]:
-                    # A(0):Unique_ID | B(1):역할_상태 | C(2):Discord_ID | D(3):Auth_Status
-                    # E(4):이름 | F(5):학번 | G(6):학과 | H(7):특기 | I(8):프로그램 | J(9):가입시간 | K(10):인증키
-                    if len(row) > 0:
-                        uid = str(row[0]).strip()
-                        code = str(row[10]).strip() if len(row) > 10 else ""
-                        
-                        # 대소문자 구분 없이 비교
-                        if uid and (auth_input.upper() == uid.upper() or (code and auth_input.upper() == code.upper())):
-                            return uid
+                doc = client.open_by_key(self.spreadsheet_id)
+
+                # ── 1단계: 통합_사용자_관리 — Unique_ID 또는 인증키 조회 ──────────
+                sheet_users = doc.worksheet(self.worksheet_users)
+                all_values = sheet_users.get_all_values()
+                if len(all_values) >= 2:
+                    for row in all_values[1:]:
+                        # A(0):Unique_ID | K(10):인증키
+                        if len(row) > 0:
+                            uid = str(row[0]).strip()
+                            code = str(row[10]).strip() if len(row) > 10 else ""
+                            if uid and (
+                                auth_input.upper() == uid.upper()
+                                or (code and auth_input.upper() == code.upper())
+                            ):
+                                log.info(f"[verify_link_code] 1단계 인증 성공 (Unique_ID/인증키): {uid}")
+                                return uid
+
+                # ── 2단계: 회원_정보 — Web_ID로 Unique_ID 역참조 ──────────────────
+                # 컬럼: A=Web_ID, B=닉네임, C=Unique_ID, D=Discord_ID, E=연동_코드, F=Auth_Status, G=가입일자, ...
+                sheet_members = doc.worksheet(self.worksheet_members)
+                member_values = sheet_members.get_all_values()
+                if len(member_values) >= 2:
+                    for row in member_values[1:]:
+                        if len(row) > 0:
+                            web_id = str(row[0]).strip()
+                            mapped_uid = str(row[2]).strip() if len(row) > 2 else ""
+                            if web_id and auth_input.strip() == web_id and mapped_uid:
+                                log.info(f"[verify_link_code] 2단계 인증 성공 (Web_ID → Unique_ID): {web_id} → {mapped_uid}")
+                                return mapped_uid
+
+                log.warning(f"[verify_link_code] 인증 실패: 입력값 '{auth_input}'와 일치하는 항목 없음")
                 return None
 
             return await loop.run_in_executor(None, _verify)
@@ -770,19 +866,33 @@ class GoogleSheetService:
             log.error(f"[record_team_result] 실패: {e}")
             return False
 
-    def build_team_report(self, members: list[dict]) -> str:
+    def build_team_report(self, members: list[dict], cached_sheets: dict) -> str:
         """
         매칭 완료 후 팀 채널에 게시할 팀 리포트 텍스트 생성.
-        스케줄/연락처는 매칭 알고리즘이 아닌 리포트에만 사용한다 (기획 확정).
-        members: [{username, department, skill, contact, weekly_schedule}, ...]
+        순차적 조건부 조회 (Fallback Search)를 이용해 구글 시트에서 최신 데이터를 가져옴.
         """
         lines = ["📋 **팀 구성 리포트**\n"]
         for i, m in enumerate(members, start=1):
-            schedule_str = m.get("weekly_schedule", "") or "미기재"
-            contact_str = m.get("contact", "") or "미기재"
+            d_id = m.get("discord_id", "")
+            is_leader = bool(m.get("is_leader", 0))
+            
+            # Fallback 데이터 조회
+            name = self.get_fallback_data(cached_sheets, discord_id=d_id, field="이름", is_leader=is_leader)
+            dept = self.get_fallback_data(cached_sheets, discord_id=d_id, field="학과", is_leader=is_leader)
+            skill = self.get_fallback_data(cached_sheets, discord_id=d_id, field="특기", is_leader=is_leader)
+            schedule_str = self.get_fallback_data(cached_sheets, discord_id=d_id, field="주간_시간표", is_leader=is_leader)
+            contact_str = self.get_fallback_data(cached_sheets, discord_id=d_id, field="연락수단", is_leader=is_leader)
+            student_id = self.get_fallback_data(cached_sheets, discord_id=d_id, field="학번", is_leader=is_leader)
+
+            # 학번 마스킹 로직 (ex: 20230750 -> 2023****)
+            if student_id != "미기재" and len(student_id) > 4:
+                student_id_masked = student_id[:4] + "*" * (len(student_id) - 4)
+            else:
+                student_id_masked = student_id if student_id != "미기재" else "미기재"
+
             lines.append(
-                f"**{i}. {m.get('username', '?')}** ({m.get('department', '?')})\n"
-                f"   🔧 특기: {m.get('skill', '?')}\n"
+                f"**{i}. {name}** ({dept} / 학번: {student_id_masked})\n"
+                f"   🔧 특기: {skill}\n"
                 f"   📅 활동 가능 시간: {schedule_str}\n"
                 f"   📞 연락 수단: {contact_str}"
             )

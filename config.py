@@ -38,7 +38,7 @@ class Config:
     TEAM_CATEGORY_NAME: str = "🔒 MYDEX 팀룸"
 
     # ── 랜덤 매칭 ─────────────────────────────────
-    DEFAULT_TEAM_SIZE: int = 4               # 기본 팀 인원
+    DEFAULT_TEAM_SIZE: int = 2               # 기본 팀 인원
     DEADLINE_WARNING_HOURS: int = 6          # 마감 N시간 전 경고
 
     # ── 테스트 모드 ───────────────────────────────

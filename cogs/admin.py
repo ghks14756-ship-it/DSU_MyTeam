@@ -226,5 +226,102 @@ class AdminCog(commands.Cog):
             embed.add_field(name="💾 로컬 캐시 DB", value="조회 실패", inline=False)
 
         await interaction.followup.send(embed=embed, ephemeral=True)
+
+    # ── /팀룸초기화 ───────────────────────────────────────────────
+    @app_commands.command(
+        name="팀룸초기화",
+        description="[관리자] 🔒 MYDEX 팀룸 카테고리 안의 더미 채널을 모두 삭제합니다"
+    )
+    @app_commands.default_permissions(administrator=True)
+    async def clear_team_rooms(self, interaction: discord.Interaction) -> None:
+        """팀룸 카테고리 내 채널 목록을 미리 보여주고 확인 후 전체 삭제."""
+        await interaction.response.defer(ephemeral=True)
+        guild = interaction.guild
+
+        category = discord.utils.get(guild.categories, name=Config.TEAM_CATEGORY_NAME)
+        if not category:
+            await interaction.followup.send(
+                f"⚠️ `{Config.TEAM_CATEGORY_NAME}` 카테고리를 찾을 수 없습니다.",
+                ephemeral=True,
+            )
+            return
+
+        channels = category.channels
+        if not channels:
+            await interaction.followup.send(
+                f"📭 `{Config.TEAM_CATEGORY_NAME}` 카테고리에 삭제할 채널이 없습니다.",
+                ephemeral=True,
+            )
+            return
+
+        # 삭제 대상 목록 미리 보여주기
+        ch_list = "\n".join(f"  • `{ch.name}`" for ch in channels)
+        embed = discord.Embed(
+            title="🗑️ 팀룸 채널 전체 삭제 확인",
+            description=(
+                f"**`{Config.TEAM_CATEGORY_NAME}`** 카테고리 내\n"
+                f"아래 채널 **{len(channels)}개**를 모두 삭제합니다.\n\n"
+                f"{ch_list}\n\n"
+                "⚠️ 이 작업은 되돌릴 수 없습니다."
+            ),
+            color=discord.Color.red(),
+        )
+
+        view = ConfirmClearView(category=category, channels=channels)
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+
+
+# ── 확인 View ─────────────────────────────────────────────────────────────────
+class ConfirmClearView(discord.ui.View):
+    def __init__(self, category: discord.CategoryChannel, channels: list):
+        super().__init__(timeout=30)
+        self.category = category
+        self.channels = list(channels)
+
+    @discord.ui.button(label="✅ 전체 삭제 확인", style=discord.ButtonStyle.danger)
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer(ephemeral=True)
+
+        deleted, failed = 0, 0
+        for ch in self.channels:
+            try:
+                await ch.delete(reason=f"팀룸초기화 명령어 ({interaction.user})")
+                deleted += 1
+                log.info(f"🗑️ 채널 삭제: #{ch.name}")
+            except Exception as e:
+                failed += 1
+                log.error(f"채널 삭제 실패 [{ch.name}]: {e}")
+
+        # 카테고리 안이 비었으면 카테고리도 삭제
+        try:
+            remaining = self.category.channels
+            if not remaining:
+                await self.category.delete(reason="팀룸초기화 후 빈 카테고리 자동 삭제")
+                cat_msg = f"\n📁 빈 카테고리 `{self.category.name}`도 삭제되었습니다."
+            else:
+                cat_msg = f"\n📁 카테고리에 채널 {len(remaining)}개가 남아 있어 카테고리는 유지합니다."
+        except Exception as e:
+            cat_msg = f"\n⚠️ 카테고리 삭제 실패: {e}"
+
+        result_lines = [f"✅ 삭제 완료: **{deleted}개**"]
+        if failed:
+            result_lines.append(f"❌ 삭제 실패: **{failed}개** (권한 문제일 수 있음)")
+        result_lines.append(cat_msg)
+
+        for item in self.children:
+            item.disabled = True
+        await interaction.message.edit(view=self)
+        await interaction.followup.send("\n".join(result_lines), ephemeral=True)
+        self.stop()
+
+    @discord.ui.button(label="❌ 취소", style=discord.ButtonStyle.secondary)
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        for item in self.children:
+            item.disabled = True
+        await interaction.message.edit(view=self)
+        await interaction.response.send_message("취소되었습니다.", ephemeral=True)
+        self.stop()
+
+
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(AdminCog(bot))

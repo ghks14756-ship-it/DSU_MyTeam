@@ -118,6 +118,10 @@ async def api_create_team(request: web.Request):
         team_id = f"TEAM-{raw_uuid[0:4]}-{raw_uuid[4:8]}-{raw_uuid[8:12]}-{raw_uuid[12:16]}"
         
         temp_discord_id = f"WEB_{team_id}"
+        unique_id = (data.get('unique_id') or '').strip()
+        if unique_id:
+            temp_discord_id = f"WEB_{unique_id}"
+            
         leader_name = data.get('leader_name', '웹 조장 유저')
         leader_student_id = data.get('leader_student_id', '0000000')
         
@@ -128,7 +132,8 @@ async def api_create_team(request: web.Request):
             department=data.get('department', '미정'),
             skill="팀장",
             activity_id=1,
-            group_code=None
+            group_code=None,
+            is_leader=True
         )
         
         sheet_data = {

@@ -145,6 +145,7 @@ class DatabaseManager:
         weekly_schedule: str = "",
         has_conditions: bool = False,
         conditions: list | None = None,
+        is_leader: bool = False,
     ) -> dict:
         """
         신청 데이터를 DB에 저장 (1인 1신청 중복 방지 로직 포함).
@@ -171,14 +172,15 @@ class DatabaseManager:
             INSERT INTO applications
                 (discord_id, username, student_id, department, skill,
                  activity_id, group_code, applied_at, expires_at,
-                 contact, weekly_schedule, has_conditions, conditions)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 contact, weekly_schedule, has_conditions, conditions, is_leader)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             discord_id, username, student_id, department, skill,
             activity_id, group_code,
             now.isoformat(), expires.isoformat(),
             contact, weekly_schedule,
-            1 if has_conditions else 0, cond_json
+            1 if has_conditions else 0, cond_json,
+            1 if is_leader else 0
         ))
         await self._conn.commit()
 

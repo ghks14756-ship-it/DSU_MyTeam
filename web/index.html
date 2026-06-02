@@ -67,12 +67,18 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
 
 <!-- TopAppBar -->
 <header class="fixed top-0 w-full z-50 backdrop-blur-xl bg-surface/80 dark:bg-surface-container-low/80 shadow-[0px_4px_20px_rgba(0,0,0,0.05)] transition-all duration-300">
-    <div class="flex justify-between items-center px-margin-mobile md:px-gutter h-16 w-full max-w-container-max mx-auto">
+    <div class="flex justify-between items-center px-margin-mobile md:px-gutter h-16 w-full max-w-container-max mx-auto relative">
         <div class="flex items-center gap-2 md:gap-4">
             <button class="md:hidden material-symbols-outlined text-primary p-2 hover:bg-primary-container/50 rounded-full transition-colors active:scale-95 duration-200">menu</button>
             <span class="material-symbols-outlined text-primary font-bold hidden md:inline-block">group</span>
             <h1 class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed-dim cursor-pointer" onclick="navigate('dashboard')">DUS My team</h1>
         </div>
+        
+        <!-- [Task 1] 중앙 HOME 버튼 -->
+        <button class="absolute left-1/2 -translate-x-1/2 font-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1" onclick="navigate('dashboard')">
+            <span class="material-symbols-outlined text-[18px]">home</span> HOME
+        </button>
+
         <div class="flex items-center">
             <a href="https://mydex.dongseo.ac.kr/loadPage.do?jspPage=/PORTAL/STUD/C/A/SSCA020&menuId=00118" target="_blank" class="bg-primary text-on-primary font-label-md px-5 py-2.5 rounded-xl shadow-sm hover:bg-primary/90 transition-colors active:scale-95 flex items-center gap-2">
                 동서대 MYDEX 이동 <span class="material-symbols-outlined text-[18px]">open_in_new</span>
@@ -176,37 +182,9 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start pb-12">
             
             <!-- Main Content (Left) -->
-            <div class="lg:col-span-9 space-y-10">
-                <!-- Section 1 -->
-                <div>
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="font-headline-sm text-on-surface flex items-center gap-2">가장 활발한 프로그램 목록 <span class="material-symbols-outlined text-[18px]">local_fire_department</span></h2>
-                        <button class="text-label-sm text-on-surface-variant hover:text-primary">View all</button>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4" id="category-hot">
-                        <!-- JS will render cards here -->
-                    </div>
-                </div>
-                
-                <!-- Section 2 -->
-                <div>
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="font-headline-sm text-on-surface">디자인 관련 프로그램</h2>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4" id="category-design">
-                        <!-- JS will render cards here -->
-                    </div>
-                </div>
-
-                <!-- Section 3 -->
-                <div>
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="font-headline-sm text-on-surface">AI 관련 프로그램</h2>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4" id="category-ai">
-                        <!-- JS will render cards here -->
-                    </div>
-                </div>
+            <!-- [Task 3] 기존 하드코딩 구역 철거, main-dashboard-container 하나만 남김 -->
+            <div id="main-dashboard-container" class="lg:col-span-9 space-y-10 min-w-0 w-full">
+                <!-- JS will dynamically render categories here -->
             </div>
 
             <!-- Sidebar (Right) -->
@@ -360,30 +338,30 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
                             <span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">stars</span>
                             나의 전문 분야
                         </h2>
-                        <button type="button" class="px-4 py-2 rounded-full border border-dashed border-outline-variant text-on-surface-variant font-label-md hover:border-primary hover:text-primary transition-colors flex items-center gap-1" onclick="toggleOtherInput('input-skill-apply')">
+                        <button type="button" class="px-4 py-2 rounded-full border border-dashed border-outline-variant text-on-surface-variant font-label-md hover:border-primary hover:text-primary transition-colors flex items-center gap-1" onclick="toggleOtherInput('wrapper-skill-apply', 'input-skill-apply')">
                             <span class="material-symbols-outlined text-[18px]">add</span> 추가
                         </button>
                     </div>
                     <p class="font-body-md text-body-md text-on-surface-variant mb-stack-md">본인의 역할과 강점을 선택해주세요. (다중 선택 가능)</p>
-                    <div class="flex flex-wrap gap-3">
-                        <label class="cursor-pointer">
-                            <input name="skill" value="기획 / PM" checked class="peer sr-only" type="checkbox">
-                            <span class="inline-block px-5 py-2 rounded-full border border-outline-variant/50 bg-surface-container-low font-label-md text-label-md text-on-surface-variant peer-checked:bg-primary peer-checked:text-on-primary peer-checked:border-primary transition-all">기획 / PM</span>
-                        </label>
-                        <label class="cursor-pointer">
-                            <input name="skill" value="UI/UX 디자인" class="peer sr-only" type="checkbox">
-                            <span class="inline-block px-5 py-2 rounded-full border border-outline-variant/50 bg-surface-container-low font-label-md text-label-md text-on-surface-variant peer-checked:bg-primary peer-checked:text-on-primary peer-checked:border-primary transition-all">UI/UX 디자인</span>
-                        </label>
-                        <label class="cursor-pointer">
-                            <input name="skill" value="프론트엔드 개발" checked class="peer sr-only" type="checkbox">
-                            <span class="inline-block px-5 py-2 rounded-full border border-outline-variant/50 bg-surface-container-low font-label-md text-label-md text-on-surface-variant peer-checked:bg-primary peer-checked:text-on-primary peer-checked:border-primary transition-all">프론트엔드 개발</span>
-                        </label>
-                        <label class="cursor-pointer">
-                            <input name="skill" value="백엔드 개발" class="peer sr-only" type="checkbox">
-                            <span class="inline-block px-5 py-2 rounded-full border border-outline-variant/50 bg-surface-container-low font-label-md text-label-md text-on-surface-variant peer-checked:bg-primary peer-checked:text-on-primary peer-checked:border-primary transition-all">백엔드 개발</span>
-                        </label>
+                    <div id="container-skill-apply" class="flex flex-wrap gap-3">
+                        <div class="group inline-block">
+                            <input name="skill" value="기획 / PM" checked  type="hidden">
+                            <span class="inline-flex items-center gap-1 px-4 py-2 rounded-full border border-outline-variant/50 bg-primary font-label-md text-label-md text-on-primary border-primary transition-all">기획 / PM<button type="button" class="opacity-0 group-hover:opacity-100 transition-opacity ml-1 w-4 h-4 flex items-center justify-center hover:text-error text-current" onclick="event.preventDefault(); this.closest('div').remove();"><span class="material-symbols-outlined text-[14px]">close</span></button></span>
+                        </div>
+                        <div class="group inline-block">
+                            <input name="skill" value="UI/UX 디자인"  type="hidden">
+                            <span class="inline-flex items-center gap-1 px-4 py-2 rounded-full border border-outline-variant/50 bg-primary font-label-md text-label-md text-on-primary border-primary transition-all">UI/UX 디자인<button type="button" class="opacity-0 group-hover:opacity-100 transition-opacity ml-1 w-4 h-4 flex items-center justify-center hover:text-error text-current" onclick="event.preventDefault(); this.closest('div').remove();"><span class="material-symbols-outlined text-[14px]">close</span></button></span>
+                        </div>
+                        <div class="group inline-block">
+                            <input name="skill" value="프론트엔드 개발" checked  type="hidden">
+                            <span class="inline-flex items-center gap-1 px-4 py-2 rounded-full border border-outline-variant/50 bg-primary font-label-md text-label-md text-on-primary border-primary transition-all">프론트엔드 개발<button type="button" class="opacity-0 group-hover:opacity-100 transition-opacity ml-1 w-4 h-4 flex items-center justify-center hover:text-error text-current" onclick="event.preventDefault(); this.closest('div').remove();"><span class="material-symbols-outlined text-[14px]">close</span></button></span>
+                        </div>
+                        <div class="group inline-block">
+                            <input name="skill" value="백엔드 개발"  type="hidden">
+                            <span class="inline-flex items-center gap-1 px-4 py-2 rounded-full border border-outline-variant/50 bg-primary font-label-md text-label-md text-on-primary border-primary transition-all">백엔드 개발<button type="button" class="opacity-0 group-hover:opacity-100 transition-opacity ml-1 w-4 h-4 flex items-center justify-center hover:text-error text-current" onclick="event.preventDefault(); this.closest('div').remove();"><span class="material-symbols-outlined text-[14px]">close</span></button></span>
+                        </div>
                     </div>
-                    <input id="input-skill-apply" type="text" class="mt-4 w-full bg-surface-container-low border border-outline-variant/50 rounded-lg px-4 py-3 font-body-md text-body-md focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all hidden" placeholder="직접 전문 분야를 입력하세요">
+                    <div id="wrapper-skill-apply" class="flex gap-2 mt-4 hidden"><input id="input-skill-apply" type="text" class="flex-1 bg-surface-container-low border border-outline-variant/50 rounded-lg px-4 py-3 font-body-md text-body-md focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all" placeholder="직접 전문 분야를 입력하세요"><button type="button" class="px-4 py-3 rounded-lg bg-primary text-on-primary font-label-md shadow-sm hover:bg-primary/90 transition-colors whitespace-nowrap" onclick="addCustomSkill('input-skill-apply', 'container-skill-apply', 'wrapper-skill-apply')">입력 완료</button></div>
                 </div>
 
 
@@ -582,7 +560,10 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
                                 <option>디자인학부</option>
                                 <option>미디어콘텐츠학부</option>
                             </select>
-                            <input id="input-dept-recruit" type="text" class="mt-2 w-full bg-surface-container-low border border-outline-variant/50 rounded-lg px-4 py-3 font-body-md text-body-md focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all hidden" placeholder="직접 학과명을 입력하세요">
+                            <div id="wrapper-dept-recruit" class="mt-2 hidden flex gap-2 w-full">
+                                <input id="input-dept-recruit" type="text" class="flex-1 bg-surface-container-low border border-outline-variant/50 rounded-lg px-4 py-3 font-body-md text-body-md focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all" placeholder="직접 학과명을 입력하세요">
+                                <button type="button" class="px-4 py-3 rounded-lg bg-primary text-on-primary font-label-md shadow-sm hover:bg-primary/90 transition-colors whitespace-nowrap" onclick="confirmCustomInput('wrapper-dept-recruit', 'input-dept-recruit', 'department')">확인</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -623,26 +604,26 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
                             <span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">stars</span>
                             모집 희망 분야 (특기/전공)
                         </h2>
-                        <button type="button" class="px-4 py-2 rounded-full border border-dashed border-outline-variant text-on-surface-variant font-label-md hover:border-primary hover:text-primary transition-colors flex items-center gap-1" onclick="toggleOtherInput('input-skill-recruit')">
+                        <button type="button" class="px-4 py-2 rounded-full border border-dashed border-outline-variant text-on-surface-variant font-label-md hover:border-primary hover:text-primary transition-colors flex items-center gap-1" onclick="toggleOtherInput('wrapper-skill-recruit', 'input-skill-recruit')">
                             <span class="material-symbols-outlined text-[18px]">add</span> 추가
                         </button>
                     </div>
                     <p class="font-body-md text-body-md text-on-surface-variant mb-stack-md">팀에서 필요로 하는 핵심 역량을 선택해주세요. (다중 선택 가능)</p>
                     <div class="flex flex-wrap gap-2.5">
-                        <label class="cursor-pointer">
-                            <input class="peer sr-only" name="recruit_skill" value="기획 / PM" type="checkbox">
-                            <span class="inline-block px-5 py-2.5 rounded-full border border-outline-variant/50 bg-surface-container-low font-label-md text-label-md text-on-surface-variant peer-checked:bg-primary peer-checked:text-on-primary peer-checked:border-primary transition-all shadow-sm">기획 / PM</span>
-                        </label>
-                        <label class="cursor-pointer">
-                            <input class="peer sr-only" name="recruit_skill" value="UI/UX 디자인" type="checkbox" checked>
-                            <span class="inline-block px-5 py-2.5 rounded-full border border-outline-variant/50 bg-surface-container-low font-label-md text-label-md text-on-surface-variant peer-checked:bg-primary peer-checked:text-on-primary peer-checked:border-primary transition-all shadow-sm">UI/UX 디자인</span>
-                        </label>
-                        <label class="cursor-pointer">
-                            <input class="peer sr-only" name="recruit_skill" value="프론트엔드" type="checkbox" checked>
-                            <span class="inline-block px-5 py-2.5 rounded-full border border-outline-variant/50 bg-surface-container-low font-label-md text-label-md text-on-surface-variant peer-checked:bg-primary peer-checked:text-on-primary peer-checked:border-primary transition-all shadow-sm">프론트엔드</span>
-                        </label>
+                        <div class="group inline-block">
+                            <input  name="recruit_skill" value="기획 / PM" type="hidden">
+                            <span class="inline-flex items-center gap-1 px-4 py-2.5 rounded-full border border-outline-variant/50 bg-primary font-label-md text-label-md text-on-primary border-primary transition-all shadow-sm">기획 / PM<button type="button" class="opacity-0 group-hover:opacity-100 transition-opacity ml-1 w-4 h-4 flex items-center justify-center hover:text-error text-current" onclick="event.preventDefault(); this.closest('div').remove();"><span class="material-symbols-outlined text-[14px]">close</span></button></span>
+                        </div>
+                        <div class="group inline-block">
+                            <input  name="recruit_skill" value="UI/UX 디자인" type="hidden" checked>
+                            <span class="inline-flex items-center gap-1 px-4 py-2.5 rounded-full border border-outline-variant/50 bg-primary font-label-md text-label-md text-on-primary border-primary transition-all shadow-sm">UI/UX 디자인<button type="button" class="opacity-0 group-hover:opacity-100 transition-opacity ml-1 w-4 h-4 flex items-center justify-center hover:text-error text-current" onclick="event.preventDefault(); this.closest('div').remove();"><span class="material-symbols-outlined text-[14px]">close</span></button></span>
+                        </div>
+                        <div class="group inline-block">
+                            <input  name="recruit_skill" value="프론트엔드" type="hidden" checked>
+                            <span class="inline-flex items-center gap-1 px-4 py-2.5 rounded-full border border-outline-variant/50 bg-primary font-label-md text-label-md text-on-primary border-primary transition-all shadow-sm">프론트엔드<button type="button" class="opacity-0 group-hover:opacity-100 transition-opacity ml-1 w-4 h-4 flex items-center justify-center hover:text-error text-current" onclick="event.preventDefault(); this.closest('div').remove();"><span class="material-symbols-outlined text-[14px]">close</span></button></span>
+                        </div>
                     </div>
-                    <input id="input-skill-recruit" type="text" class="mt-4 w-full bg-surface-container-low border border-outline-variant/50 rounded-lg px-4 py-3 font-body-md text-body-md focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all hidden" placeholder="직접 희망 분야를 입력하세요">
+                    <div id="wrapper-skill-recruit" class="flex gap-2 mt-4 hidden"><input id="input-skill-recruit" type="text" class="flex-1 bg-surface-container-low border border-outline-variant/50 rounded-lg px-4 py-3 font-body-md text-body-md focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all" placeholder="직접 희망 분야를 입력하세요"><button type="button" class="px-4 py-3 rounded-lg bg-primary text-on-primary font-label-md shadow-sm hover:bg-primary/90 transition-colors whitespace-nowrap" onclick="addCustomSkill('input-skill-recruit', 'container-skill-recruit', 'wrapper-skill-recruit')">입력 완료</button></div>
                 </div>
                 
                 <!-- Information Cards -->
@@ -798,11 +779,9 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
             <aside class="lg:col-span-3 space-y-4">
                 <div class="glass-card rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.05)] border border-outline-variant/30 bg-white overflow-hidden">
                     <h3 class="font-headline-sm text-on-surface px-6 py-5 border-b border-outline-variant/30 font-bold">프로그램 카테고리</h3>
-                    <ul class="flex flex-col">
-                        <li><button class="w-full px-6 py-4 flex justify-between items-center text-on-surface-variant hover:bg-surface-container-low transition-colors text-[14px]" onclick="filterTeams('all')">베스트 프로그램 <span class="material-symbols-outlined text-[16px]">chevron_right</span></button></li>
-                        <li><button class="w-full px-6 py-4 flex justify-between items-center text-on-surface-variant hover:bg-surface-container-low transition-colors text-[14px]" onclick="filterTeams('design')">디자인 관련 프로그램 <span class="material-symbols-outlined text-[16px]">chevron_right</span></button></li>
-                        <li><button class="w-full px-6 py-4 flex justify-between items-center text-on-surface-variant hover:bg-surface-container-low transition-colors text-[14px]" onclick="filterTeams('ai')">AI 관련 프로그램 <span class="material-symbols-outlined text-[16px]">chevron_right</span></button></li>
-                        <li><button class="w-full px-6 py-4 flex justify-between items-center text-on-surface-variant hover:bg-surface-container-low transition-colors text-[14px]" onclick="filterTeams('humanities')">인문 문학 프로그램 <span class="material-symbols-outlined text-[16px]">chevron_right</span></button></li>
+                    <ul class="flex flex-col" id="sidebar-categories">
+                        <li><button class="w-full px-6 py-4 flex justify-between items-center text-on-surface-variant hover:bg-surface-container-low transition-colors text-[14px] font-bold" onclick="filterTeams('all', '가장 활발한 프로그램')">가장 활발한 프로그램 <span class="material-symbols-outlined text-[16px]">chevron_right</span></button></li>
+                        <!-- JS will dynamically render categories here -->
                     </ul>
                 </div>
             </aside>
@@ -810,7 +789,7 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
             <!-- Middle Column: Team List -->
             <section class="lg:col-span-6 space-y-6">
                 <div class="flex items-center justify-between mb-2">
-                    <h2 class="font-headline-md text-headline-md text-on-surface font-bold">매칭 대기 중인 팀</h2>
+                    <h2 id="team-list-title" class="font-headline-md text-headline-md text-on-surface font-bold">현재 매칭 진행중인 팀</h2>
                     <div class="flex gap-2 relative">
                         <select id="team-sort-filter" class="appearance-none flex items-center gap-2 pl-10 pr-8 py-2 border border-outline-variant text-on-surface-variant rounded-lg font-label-md text-label-md hover:bg-surface-container transition-colors cursor-pointer bg-transparent" onchange="sortAndRenderTeams()">
                             <option value="none">필터 (기본)</option>
@@ -868,7 +847,7 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
     const DISCORD_INVITE_URL = 'https://discord.gg/3r8xYkApAc';
 
     // TODO: 배포 환경에 맞춰 아래 API 주소를 변경하세요. (예: ngrok 주소)
-    const API_BASE_URL = 'https://systems-giants-tale-terry.trycloudflare.com';
+    const API_BASE_URL = 'http://localhost:8080'; // 개발 환경 (디스코드 봇 포트)
 
     // Navigation logic
     function navigate(pageId, options = {}) {
@@ -1057,18 +1036,11 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
     // [전역 함수] loadDashboardPrograms - navigate() 밖에 선언
     // ================================================================
     async function loadDashboardPrograms() {
-        const containers = {
-            hot: document.getElementById('category-hot'),
-            design: document.getElementById('category-design'),
-            ai: document.getElementById('category-ai')
-        };
+        const container = document.getElementById('main-dashboard-container');
+        if (!container) return;
 
         const setError = (msg) => {
-            for (const key in containers) {
-                if (containers[key]) {
-                    containers[key].innerHTML = `<div class="col-span-full p-6 text-center text-red-500 font-label-md">${msg}</div>`;
-                }
-            }
+            container.innerHTML = `<div class="col-span-full p-6 text-center text-red-500 font-label-md">${msg}</div>`;
         };
 
         try {
@@ -1088,30 +1060,40 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
                 return;
             }
 
-            // 컨테이너 전부 비우기
-            for (const key in containers) {
-                if (containers[key]) containers[key].innerHTML = '';
-            }
+            // 컨테이너 초기화
+            container.innerHTML = '';
 
-            // 카드 HTML 생성 함수
-            const PLACEHOLDER_IMAGES = [
-                'https://images.unsplash.com/photo-1519389950473-47ba0277781c?q=80&w=400&auto=format&fit=crop',
-                'https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=400&auto=format&fit=crop',
-                'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=400&auto=format&fit=crop',
-                'https://images.unsplash.com/photo-1516321497487-e288fb19713f?q=80&w=400&auto=format&fit=crop',
-            ];
-            let placeholderIdx = 0;
+            // [Task 2] 프로그램 이미지 자동 대체(Fallback) 로직
+            const getFallbackImage = (category) => {
+                const cat = (category || '').trim().toLowerCase();
+                if (cat.includes('디자인')) return 'https://images.unsplash.com/photo-1561070791-2526d30994b5?auto=format&fit=crop&w=400';
+                if (cat.includes('ai') || cat.includes('인공지능') || cat.includes('데이터')) return 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&w=400';
+                if (cat.includes('창업') || cat.includes('비즈니스')) return 'https://images.unsplash.com/photo-1556761175-5973dc0f32b7?auto=format&fit=crop&w=400';
+                if (cat.includes('어학') || cat.includes('글로벌')) return 'https://images.unsplash.com/photo-1528642474498-1af0c17fd8c3?auto=format&fit=crop&w=400';
+                if (cat.includes('인문') || cat.includes('문학')) return 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=400';
+                if (cat.includes('운동') || cat.includes('스포츠') || cat.includes('체육')) return 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=400';
+                
+                const defaultImgs = [
+                    'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=400',
+                    'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=400',
+                    'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=400',
+                    'https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=400'
+                ];
+                return defaultImgs[Math.floor(Math.random() * defaultImgs.length)];
+            };
 
             const makeCard = (item, icon) => {
-                const name = (item.name || '제목 없음').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                const name = (item.name || item['프로그램 내용'] || '제목 없음').replace(/</g, '&lt;').replace(/>/g, '&gt;');
                 const desc = (item.description || item['전달사항'] || '상세 내용이 없습니다.').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                const deadline = item.deadline ? `<span class="material-symbols-outlined text-[13px] mr-0.5">schedule</span>${item.deadline}` : '';
-                // 이미지 없으면 순환 플레이스홀더
-                const raw = item.image || item['첨부파일'] || '';
-                const imgUrl = raw.trim() !== '' ? raw : PLACEHOLDER_IMAGES[placeholderIdx++ % PLACEHOLDER_IMAGES.length];
+                const deadline = item.deadline || item['신청일시'] ? `<span class="material-symbols-outlined text-[13px] mr-0.5">schedule</span>${item.deadline || item['신청일시']}` : '';
+                
+                const rawImg = (item.image || item['첨부파일'] || '').trim();
+                const category = item.category || item['카테고리별 분류'] || item['카테고리'] || '';
+                const imgUrl = rawImg !== '' ? rawImg : getFallbackImage(category);
 
+                // [Action Item A] flex-none, shrink-0, w-[calc(25%-12px)] 적용하여 1줄에 딱 4개 유지
                 return `
-                <div class="glass-card rounded-xl overflow-hidden border border-outline-variant/30 bg-white hover:-translate-y-1 transition-transform cursor-pointer shadow-sm flex flex-col" onclick="navigate('apply-step1',{mode:'join'})">
+                <div class="glass-card flex-none shrink-0 w-[calc(100%-0px)] sm:w-[calc(50%-8px)] lg:w-[calc(25%-12px)] rounded-xl overflow-hidden border border-outline-variant/30 bg-white hover:-translate-y-1 transition-transform cursor-pointer shadow-sm flex flex-col" onclick="navigate('apply-step1',{mode:'join'})">
                     <div class="h-28 relative bg-surface-container-high">
                         <img src="${imgUrl}" alt="${name}" class="w-full h-full object-cover" onerror="this.style.display='none'">
                         <div class="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none"></div>
@@ -1125,30 +1107,71 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
                 </div>`;
             };
 
-            // [가장 활발한 프로그램] : max_members 내림차순 상위 4개
+            // [Action Item B] 렌더링 함수: 화살표 버튼 동적 생성 및 가로 스크롤 레이아웃
+            const renderCategoryRow = (title, programsList, iconName = '') => {
+                if (!programsList || programsList.length === 0) return '';
+                const rowId = 'row-' + Math.random().toString(36).substr(2, 9);
+                const showArrows = programsList.length > 4;
+                const cardsHtml = programsList.map(item => makeCard(item, iconName)).join('');
+                
+                return `
+                <div class="relative group">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="font-headline-sm text-on-surface flex items-center gap-2">${title} ${iconName ? `<span class="material-symbols-outlined text-[18px]">${iconName}</span>` : ''}</h2>
+                        ${showArrows ? `
+                        <div class="flex gap-2">
+                            <button onclick="document.getElementById('${rowId}').scrollBy({left: -320, behavior: 'smooth'})" class="w-8 h-8 rounded-full bg-surface-container hover:bg-primary-container flex items-center justify-center transition-colors shadow-sm text-on-surface-variant hover:text-primary active:scale-95"><span class="material-symbols-outlined text-[18px]">chevron_left</span></button>
+                            <button onclick="document.getElementById('${rowId}').scrollBy({left: 320, behavior: 'smooth'})" class="w-8 h-8 rounded-full bg-surface-container hover:bg-primary-container flex items-center justify-center transition-colors shadow-sm text-on-surface-variant hover:text-primary active:scale-95"><span class="material-symbols-outlined text-[18px]">chevron_right</span></button>
+                        </div>
+                        ` : ''}
+                    </div>
+                    <!-- [Action Item A] flex flex-nowrap overflow-x-hidden scroll-smooth 강제 적용 -->
+                    <div id="${rowId}" class="flex flex-nowrap overflow-x-hidden scroll-smooth gap-4 pb-2 w-full no-scrollbar">
+                        ${cardsHtml}
+                    </div>
+                </div>
+                `;
+            };
+
+            let finalHtml = '';
+
+            // [Task 3] 1. 가장 활발한 프로그램 목록 (항상 1순위 노출)
             const sorted = [...data].sort((a, b) => Number(b.max_members || 0) - Number(a.max_members || 0));
             const top4 = sorted.slice(0, 4);
-            if (containers.hot) {
-                top4.forEach(item => containers.hot.insertAdjacentHTML('beforeend', makeCard(item, 'local_fire_department')));
+            if (top4.length > 0) {
+                finalHtml += renderCategoryRow('가장 활발한 프로그램 목록', top4, 'local_fire_department');
             }
 
-            // [카테고리별] 원본 배열을 카테고리에 따라 분배
+            // [Task 3] 2. 데이터 기반 고유 카테고리 무한 추출
+            const categories = new Set();
             data.forEach(item => {
-                const cat = (item['카테고리별 분류'] || '').trim();
-                if (cat === '디자인 관련' && containers.design) {
-                    containers.design.insertAdjacentHTML('beforeend', makeCard(item, 'palette'));
-                } else if (cat === 'AI 관련' && containers.ai) {
-                    containers.ai.insertAdjacentHTML('beforeend', makeCard(item, 'psychology'));
+                let cat = (item.category || item['카테고리별 분류'] || item['카테고리'] || '').trim();
+                if (!cat) cat = '기타 프로그램'; // 빈 카테고리도 하나로 묶음
+                categories.add(cat);
+            });
+
+            // [Task 3] 3. 동적으로 추출된 카테고리 개수만큼 줄(Row) 생성
+            categories.forEach(cat => {
+                const programs = data.filter(item => {
+                    let c = (item.category || item['카테고리별 분류'] || item['카테고리'] || '').trim();
+                    if (!c) c = '기타 프로그램';
+                    return c === cat;
+                });
+                
+                let icon = 'category';
+                if (cat.includes('디자인')) icon = 'palette';
+                else if (cat.includes('ai') || cat.includes('인공지능') || cat.includes('데이터')) icon = 'psychology';
+                else if (cat.includes('창업') || cat.includes('비즈니스')) icon = 'lightbulb';
+                else if (cat.includes('운동') || cat.includes('스포츠') || cat.includes('체육')) icon = 'fitness_center';
+                else if (cat.includes('어학') || cat.includes('글로벌')) icon = 'language';
+                else if (cat.includes('인문') || cat.includes('문학')) icon = 'menu_book';
+                
+                if (programs.length > 0) {
+                    finalHtml += renderCategoryRow(cat, programs, icon);
                 }
             });
 
-            // 비어있는 섹션 처리
-            if (containers.design && !containers.design.children.length) {
-                containers.design.innerHTML = '<div class="col-span-full p-6 text-center text-on-surface-variant text-label-md">관련 프로그램이 없습니다.</div>';
-            }
-            if (containers.ai && !containers.ai.children.length) {
-                containers.ai.innerHTML = '<div class="col-span-full p-6 text-center text-on-surface-variant text-label-md">관련 프로그램이 없습니다.</div>';
-            }
+            container.innerHTML = finalHtml;
 
         } catch (e) {
             console.error('[Dashboard] 데이터 로드 실패:', e);
@@ -1168,18 +1191,54 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
             const result = await res.json();
             if (result.success && result.data.length > 0) {
                 programsData = result.data;
-                renderCarousel();
                 renderFormProgramOptions();
+                updateSidebarCategories(); // 사이드바 카테고리 동적 렌더링
             } else {
-                document.getElementById('program-carousel-track').innerHTML = '<div class="w-full flex items-center justify-center h-full">등록된 프로그램이 없습니다.</div>';
+                console.warn('등록된 프로그램이 없습니다.');
             }
         } catch (e) {
             console.error('Failed to load programs:', e);
-            document.getElementById('program-carousel-track').innerHTML = '<div class="w-full flex items-center justify-center h-full text-error">프로그램 목록을 불러오지 못했습니다.</div>';
         }
     }
 
     let allTeamsData = [];
+    let currentCategory = 'all';
+    let currentCategoryName = '현재 매칭 진행중인 팀';
+
+    // [Action Item B] 사이드바 동적 생성 (구글 시트 고유 카테고리 100% 추출)
+    function updateSidebarCategories() {
+        const sidebar = document.getElementById('sidebar-categories');
+        if (!sidebar) return;
+
+        const categories = new Set();
+        programsData.forEach(p => {
+            let cat = (p.category || p['카테고리별 분류'] || p['카테고리'] || '').trim();
+            if (cat) categories.add(cat);
+        });
+
+        // [Action Item A] 기본 메뉴명 수정
+        let html = `<li><button class="w-full px-6 py-4 flex justify-between items-center text-on-surface-variant hover:bg-surface-container-low transition-colors text-[14px] font-bold" onclick="filterTeams('all', '현재 매칭 진행중인 팀')">현재 매칭 진행중인 팀 <span class="material-symbols-outlined text-[16px]">chevron_right</span></button></li>`;
+        
+        // 데이터에 존재하는 카테고리만 동적 생성
+        categories.forEach(cat => {
+            html += `<li><button class="w-full px-6 py-4 flex justify-between items-center text-on-surface-variant hover:bg-surface-container-low transition-colors text-[14px]" onclick="filterTeams('${cat}', '${cat}')">${cat} <span class="material-symbols-outlined text-[16px]">chevron_right</span></button></li>`;
+        });
+        
+        sidebar.innerHTML = html;
+    }
+
+    // [Action Item C] 중앙 메인 타이틀 동적 변경 및 필터 변수 저장
+    function filterTeams(categoryId, categoryName = '') {
+        currentCategory = categoryId;
+        currentCategoryName = categoryName || categoryId;
+        
+        const titleEl = document.getElementById('team-list-title');
+        if (titleEl) {
+            titleEl.innerText = (categoryId === 'all') ? "현재 매칭 진행중인 팀" : `${currentCategoryName} 매칭 대기 팀`;
+        }
+        // [Action Item B] 재렌더링 트리거
+        sortAndRenderTeams();
+    }
 
     async function loadTeams() {
         const container = document.getElementById('team-list-container');
@@ -1205,7 +1264,48 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
         if (!container) return;
         
         const filter = document.getElementById('team-sort-filter') ? document.getElementById('team-sort-filter').value : 'none';
-        let sorted = [...allTeamsData];
+        
+        // 매칭 대기(진행) 중인 팀만 표시 (결성완료 등 제외)
+        let filtered = allTeamsData.filter(team => {
+            const status = (team['Team_Status'] || team['팀_상태'] || '').trim();
+            return status !== '결성완료' && status !== '매칭완료' && status !== '취소';
+        });
+        
+        // [Action Item A] 카테고리 필터링 (Array.prototype.filter)
+        if (currentCategory !== 'all') {
+            filtered = filtered.filter(team => {
+                const programName = (team['프로그램_선택'] || '').trim();
+                
+                // 팀의 프로그램명이 programsData의 어느 카테고리에 속하는지 조회
+                // [Action Item B] 띄어쓰기 및 추가 텍스트(예: 특강명 뒤의 부가설명)가 있어도 찾을 수 있도록 정밀 매칭
+                const prog = programsData.find(p => {
+                    const pName = (p.name || p['프로그램 내용'] || '').trim();
+                    if (!pName || !programName) return false;
+                    const normalize = str => str.replace(/\s+/g, '');
+                    const nProgName = normalize(programName);
+                    const nPName = normalize(pName);
+                    return nProgName.includes(nPName) || nPName.includes(nProgName);
+                });
+                
+                let teamCategory = '';
+                if (prog) {
+                    teamCategory = (prog.category || prog['카테고리별 분류'] || prog['카테고리'] || '').trim();
+                }
+                
+                // [Action Item C] 정확한 필터링 매칭 로직
+                // 1) 정확히 카테고리가 일치하는 경우 통과
+                if (teamCategory === currentCategory) return true;
+                
+                // 2) 카테고리를 못 찾았더라도, 프로그램 이름에 클릭한 카테고리 키워드가 포함되어 있다면 통과
+                const keyword = currentCategory.replace('관련 프로그램', '').replace('프로그램', '').trim();
+                if (keyword && programName.includes(keyword)) return true;
+                if (keyword.toLowerCase() === 'ai' && programName.toLowerCase().includes('ai')) return true;
+                
+                return false;
+            });
+        }
+        
+        let sorted = [...filtered];
         
         if (filter === 'program_asc') {
             sorted.sort((a, b) => (a['프로그램_선택'] || '').localeCompare(b['프로그램_선택'] || ''));
@@ -1223,15 +1323,15 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
                     <div class="w-20 h-20 rounded-xl bg-primary-container overflow-hidden flex-shrink-0 flex items-center justify-center text-primary font-bold text-2xl">
                         ${team['팀장_이름'] ? team['팀장_이름'].substring(0, 1) : 'T'}
                     </div>
-                    <div class="flex-grow">
+                    <div class="flex-1 overflow-hidden min-w-0">
                         <div class="flex justify-between items-start">
                             <div>
                                 <div class="flex items-center gap-3 mb-1">
-                                    <h3 class="font-headline-sm text-headline-sm text-on-surface">${team['프로그램_선택'] || '프로그램 미정'}</h3>
-                                    <span class="font-label-sm text-label-sm bg-secondary-container text-on-secondary-container px-2.5 py-0.5 rounded-full ring-1 ring-secondary-container/50">${team['현재_매칭_인원']}/${team['모집_인원_수']}</span>
+                                    <h3 class="font-headline-sm text-headline-sm text-on-surface truncate">${team['프로그램_선택'] || '프로그램 미정'}</h3>
+                                    <span class="font-label-sm text-label-sm bg-secondary-container text-on-secondary-container px-2.5 py-0.5 rounded-full ring-1 ring-secondary-container/50 whitespace-nowrap">${team['현재_매칭_인원']}/${team['모집_인원_수']}</span>
                                 </div>
                                 <div class="flex flex-wrap gap-2 mb-3">
-                                    <span class="font-label-sm text-label-sm text-tertiary bg-white border border-outline-variant/30 px-2.5 py-1 rounded-full">${team['팀장_학과'] || '소속 미상'}</span>
+                                    <span class="font-label-sm text-label-sm text-tertiary bg-white border border-outline-variant/30 px-2.5 py-1 rounded-full whitespace-nowrap">${team['팀장_학과'] || '소속 미상'}</span>
                                 </div>
                             </div>
                         </div>
@@ -1240,8 +1340,9 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
                             ${team['모집_상세내용']}
                         </p>
                     </div>
-                    <div class="flex md:flex-col gap-2 justify-center">
-                        <button onclick="navigate('apply-step1', {mode: 'join'})" class="px-6 py-3 bg-gradient-to-r from-primary to-secondary text-on-primary font-label-md text-label-md rounded-xl hover:opacity-90 active:scale-95 transition-all shadow-sm">가입 신청</button>
+                    <!-- [Task 4] 가입 신청 버튼 규격 통일: flex-none, whitespace-nowrap 적용 -->
+                    <div class="flex md:flex-col gap-2 justify-center flex-none ml-2">
+                        <button onclick="navigate('apply-step1', {mode: 'join'})" class="px-6 py-3 bg-gradient-to-r from-primary to-secondary text-on-primary font-label-md text-label-md rounded-xl hover:opacity-90 active:scale-95 transition-all shadow-sm whitespace-nowrap shrink-0">가입 신청</button>
                     </div>
                 </div>
             `).join('');
@@ -1252,59 +1353,20 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
         }
     }
 
-    function renderCarousel() {
-        const track = document.getElementById('program-carousel-track');
-        const indicators = document.getElementById('program-carousel-indicators');
-        
-        track.innerHTML = '';
-        indicators.innerHTML = '';
-        
-        programsData.forEach((prog, index) => {
-            // Slide
-            const slide = document.createElement('div');
-            slide.className = 'w-full flex-shrink-0 flex items-center justify-center h-full p-8';
-            
-            // Use 첨부파일 if it exists, otherwise fall back to Unsplash images
-            const imgUrls = [
-                'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&q=80&w=400',
-                'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&q=80&w=400',
-                'https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&q=80&w=400'
-            ];
-            const imgSrc = prog['첨부파일'] ? prog['첨부파일'] : imgUrls[index % imgUrls.length];
-            
-            slide.innerHTML = `
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl items-center">
-                    <div class="space-y-4">
-                        <h3 class="font-headline-md text-headline-md text-primary font-bold line-clamp-2">${prog['프로그램 내용']}</h3>
-                        <div class="space-y-2 font-body-sm text-body-sm text-on-surface-variant">
-                            <p><strong class="text-on-surface">신청기간:</strong> ${prog['신청일시']}</p>
-                            <p><strong class="text-on-surface">대상:</strong> <span class="line-clamp-2">${prog['신청대상']}</span></p>
-                            <p><strong class="text-on-surface">포인트:</strong> ${prog['최대학습포인트']}</p>
-                        </div>
-                    </div>
-                    <div class="hidden md:block w-full h-48 rounded-xl overflow-hidden shadow-sm">
-                        <img src="${imgSrc}" class="w-full h-full object-cover" alt="프로그램 사진">
-                    </div>
-                </div>
-            `;
-            track.appendChild(slide);
-            
-            // Indicator
-            const dot = document.createElement('button');
-            dot.className = `w-2 h-2 rounded-full transition-all ${index === 0 ? 'bg-primary w-4' : 'bg-outline-variant'}`;
-            dot.onclick = () => goToProgramSlide(index);
-            indicators.appendChild(dot);
-        });
-    }
-
     function renderFormProgramOptions() {
         const applySelect = document.getElementById('apply-category-select');
         const recruitSelect = document.getElementById('recruit-category-select');
         
         if (!applySelect || !recruitSelect) return;
         
-        // Extract unique categories. Fallback to '일반' if no category exists
-        const categories = [...new Set(programsData.map(p => p['카테고리'] || '일반'))];
+        // Extract unique categories using robust extraction logic
+        const categorySet = new Set();
+        programsData.forEach(p => {
+            let cat = (p.category || p['카테고리별 분류'] || p['카테고리'] || '').trim();
+            if (cat) categorySet.add(cat);
+        });
+        
+        const categories = Array.from(categorySet);
         
         const optionsHtml = '<option value="">카테고리를 선택하세요</option>' + 
                             categories.map(c => `<option value="${c}">${c}</option>`).join('');
@@ -1324,15 +1386,17 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
         }
         
         const selectedCategory = selectEl.value;
-        const filtered = programsData.filter(p => (p['카테고리'] || '일반') === selectedCategory);
+        const filtered = programsData.filter(p => {
+            const cat = (p.category || p['카테고리별 분류'] || p['카테고리'] || '').trim();
+            return cat === selectedCategory;
+        });
         
         if (filtered.length > 0) {
             track.innerHTML = filtered.map((prog, idx) => `
-                <label class="relative cursor-pointer flex-shrink-0 min-w-[85%] sm:min-w-[calc(50%-0.5rem)] md:min-w-[280px]">
+                <label class="relative cursor-pointer flex-shrink-0 w-[85vw] sm:w-[320px] md:w-[360px] max-w-full">
                     <input ${idx === 0 ? 'checked' : ''} class="peer sr-only" name="program" type="radio" value="${prog['프로그램 내용']}">
-                    <div class="p-6 rounded-xl border border-outline-variant/50 bg-surface-container-low peer-checked:border-primary peer-checked:bg-primary-container/20 peer-checked:ring-2 peer-checked:ring-primary/30 transition-all text-center h-full flex flex-col justify-center">
-                        <span class="font-headline-sm text-[18px] text-on-surface block mb-1 line-clamp-2 leading-tight">${prog['프로그램 내용']}</span>
-                        <span class="font-label-sm text-on-surface-variant line-clamp-1">${prog['프로그램 담당자'] || ''}</span>
+                    <div class="p-6 rounded-xl border border-outline-variant/50 bg-surface-container-low peer-checked:border-primary peer-checked:bg-primary-container/20 peer-checked:ring-2 peer-checked:ring-primary/30 transition-all text-center h-full flex flex-col justify-center min-h-[100px]">
+                        <span class="font-headline-sm text-[18px] text-on-surface block leading-normal break-words whitespace-normal">${prog['프로그램 내용']}</span>
                     </div>
                 </label>
             `).join('');
@@ -1349,16 +1413,18 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
 
     function updateCarouselState() {
         const track = document.getElementById('program-carousel-track');
-        track.style.transform = `translateX(-${currentProgramSlide * 100}%)`;
+        if(track) track.style.transform = `translateX(-${currentProgramSlide * 100}%)`;
         
-        const indicators = document.getElementById('program-carousel-indicators').children;
-        Array.from(indicators).forEach((dot, idx) => {
-            if (idx === currentProgramSlide) {
-                dot.className = 'w-4 h-2 rounded-full transition-all bg-primary';
-            } else {
-                dot.className = 'w-2 h-2 rounded-full transition-all bg-outline-variant';
-            }
-        });
+        const indicators = document.getElementById('program-carousel-indicators');
+        if(indicators) {
+            Array.from(indicators.children).forEach((dot, idx) => {
+                if (idx === currentProgramSlide) {
+                    dot.className = 'w-4 h-2 rounded-full transition-all bg-primary';
+                } else {
+                    dot.className = 'w-2 h-2 rounded-full transition-all bg-outline-variant';
+                }
+            });
+        }
     }
 
     function scrollFormCarousel(btn, direction) {
@@ -1408,6 +1474,37 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
     }
 
     window.addEventListener('resize', updateCarouselPadding);
+
+            function addTechTag() {
+        const inputEl = document.getElementById('input-tech-recruit');
+        const container = document.getElementById('tech-tags-container');
+        const wrapper = document.getElementById('wrapper-tech-recruit');
+        if (inputEl && inputEl.value.trim() !== '' && container) {
+            const val = inputEl.value.trim();
+            const tagHtml = `<div class="group inline-block"><input name="tech_stack" value="${val}" checked  type="hidden"><span class="inline-flex items-center gap-1 px-4 py-2 rounded-full border border-outline-variant/50 bg-primary font-label-md text-label-md text-on-primary border-primary transition-all">${val}<button type="button" class="opacity-0 group-hover:opacity-100 transition-opacity ml-1 w-4 h-4 flex items-center justify-center hover:text-error text-current" onclick="event.preventDefault(); this.closest(\'div\').remove();"><span class="material-symbols-outlined text-[14px]">close</span></button></span></div>`;
+            const btn = container.querySelector('button');
+            if (btn) {
+                btn.insertAdjacentHTML('beforebegin', tagHtml);
+            } else {
+                container.insertAdjacentHTML('beforeend', tagHtml);
+            }
+            inputEl.value = '';
+            if(wrapper) wrapper.classList.add('hidden');
+        }
+    }
+
+    function addCustomSkill(inputId, containerId, wrapperId) {
+        const inputEl = document.getElementById(inputId);
+        const containerEl = document.getElementById(containerId);
+        const wrapperEl = document.getElementById(wrapperId);
+        if (inputEl && inputEl.value.trim() !== '' && containerEl) {
+            const value = inputEl.value.trim();
+            const labelHtml = `<div class="group inline-block"><input name="skill" value="${value}" checked  type="hidden"><span class="inline-flex items-center gap-1 px-4 py-2 rounded-full border border-outline-variant/50 bg-primary font-label-md text-label-md text-on-primary border-primary transition-all">${value}<button type="button" class="opacity-0 group-hover:opacity-100 transition-opacity ml-1 w-4 h-4 flex items-center justify-center hover:text-error text-current" onclick="event.preventDefault(); this.closest('div').remove();"><span class="material-symbols-outlined text-[14px]">close</span></button></span></div>`;
+            containerEl.insertAdjacentHTML('beforeend', labelHtml);
+            inputEl.value = '';
+            if (wrapperEl) wrapperEl.classList.add('hidden');
+        }
+    }
 
     function toggleOtherInput(wrapperId, inputId) {
         const wrapperEl = document.getElementById(wrapperId);

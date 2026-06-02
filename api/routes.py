@@ -39,12 +39,21 @@ async def api_activities(request: web.Request):
         raw = await bot.gsheet.get_programs()
         # 프론트엔드 JS 기대값에 맞춤
         programs = []
+        
+        def _parse_int(val):
+            try:
+                # '3점', '포인트없음' 등 문자열이 들어올 수 있으므로 숫자 변환 시 예외 처리
+                clean_val = str(val).replace('점', '').strip()
+                return int(clean_val)
+            except ValueError:
+                return 0
+                
         for p in raw:
             programs.append({
                 "name": p.get("프로그램 내용", ""),
                 "description": p.get("전달사항", ""),
                 "deadline": p.get("신청일시", ""),
-                "max_members": int(p.get("최대학습포인트", 0) or 0),
+                "max_members": _parse_int(p.get("최대학습포인트", 0)),
                 "category": p.get("카테고리별 분류", ""),
                 "target": p.get("신청대상", ""),
                 "type": p.get("신청형태", ""),

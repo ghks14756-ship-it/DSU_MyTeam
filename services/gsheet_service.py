@@ -186,11 +186,17 @@ class GoogleSheetService:
                 name = p.get("프로그램 내용", "").strip()
                 if not name:
                     continue
+                def _parse_int(val):
+                    try:
+                        return int(str(val).replace('점', '').strip())
+                    except ValueError:
+                        return 0
+
                 result.append({
                     "name": name,
                     "description": p.get("전달사항", ""),
                     "deadline": p.get("신청일시", ""),
-                    "max_members": int(p.get("최대학습포인트", 0) or 0),
+                    "max_members": _parse_int(p.get("최대학습포인트", 0)),
                     "카테고리별 분류": p.get("카테고리별 분류", ""),
                 })
             return result

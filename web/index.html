@@ -895,7 +895,7 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
     const DISCORD_INVITE_URL = 'https://discord.gg/3r8xYkApAc';
 
     // TODO: 배포 환경에 맞춰 아래 API 주소를 변경하세요. (예: ngrok 주소)
-    const API_BASE_URL = 'http://localhost:8080';
+    const API_BASE_URL = 'https://systems-giants-tale-terry.trycloudflare.com';
 
     // Navigation logic
     function navigate(pageId, options = {}) {
@@ -1593,7 +1593,7 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
         }
 
         try {
-            const res = await fetch(`http://localhost:8080/api/my-profile?uid=${uniqueId}`);
+            const res = await fetch(`${API_BASE_URL}/api/my-profile?uid=${uniqueId}`);
             const result = await res.json();
             if (result.success) {
                 const d = result.data;

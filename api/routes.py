@@ -36,7 +36,31 @@ def add_cors_headers(response):
 async def api_activities(request: web.Request):
     bot = request.app['bot']
     try:
-        programs = await bot.gsheet.get_programs()
+        raw = await bot.gsheet.get_programs()
+        # 프론트엔드 JS 기대값에 맞춤
+        programs = []
+        for p in raw:
+            programs.append({
+                "name": p.get("프로그램 내용", ""),
+                "description": p.get("전달사항", ""),
+                "deadline": p.get("신청일시", ""),
+                "max_members": int(p.get("최대학습포인트", 0) or 0),
+                "category": p.get("카테고리별 분류", ""),
+                "target": p.get("신청대상", ""),
+                "type": p.get("신청형태", ""),
+                "manager": p.get("프로그램 담당자", ""),
+                "image": p.get("첨부파일", ""),
+                # 원본 데이터 유지
+                "프로그램 내용": p.get("프로그램 내용", ""),
+                "전달사항": p.get("전달사항", ""),
+                "신청일시": p.get("신청일시", ""),
+                "카테고리별 분류": p.get("카테고리별 분류", ""),
+                "카테고리": p.get("카테고리", ""),
+                "첨부파일": p.get("첨부파일", ""),
+                "신청대상": p.get("신청대상", ""),
+                "최대학습포인트": p.get("최대학습포인트", ""),
+                "프로그램 담당자": p.get("프로그램 담당자", "")
+            })
         return add_cors_headers(web.json_response({"success": True, "data": programs}))
     except Exception as e:
         log.error(f"프로그램 목록 로드 실패: {e}")

@@ -191,6 +191,7 @@ class GoogleSheetService:
                     "description": p.get("전달사항", ""),
                     "deadline": p.get("신청일시", ""),
                     "max_members": int(p.get("최대학습포인트", 0) or 0),
+                    "카테고리별 분류": p.get("카테고리별 분류", ""),
                 })
             return result
         except Exception as e:

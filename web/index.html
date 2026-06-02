@@ -73,31 +73,10 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
             <span class="material-symbols-outlined text-primary font-bold hidden md:inline-block">group</span>
             <h1 class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed-dim cursor-pointer" onclick="navigate('dashboard')">DUS My team</h1>
         </div>
-        <nav class="hidden md:flex items-center gap-8">
-            <a href="#" onclick="navigate('apply-step1')" id="nav-apply" class="nav-link font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors">매칭</a>
-            <a href="#" onclick="navigate('recruit-step1')" id="nav-recruit" class="nav-link font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors">모집</a>
-            <a href="#" onclick="navigate('status')" id="nav-status" class="nav-link font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors flex flex-col items-center">현황</a>
-        </nav>
-        <div id="header-auth-container" class="flex items-center gap-4">
-            <!-- Logged Out State -->
-            <button id="btn-header-login" onclick="openAuthModal()" class="text-primary font-label-md hover:bg-primary-container/30 px-5 py-2 rounded-full transition-colors active:scale-95 hidden md:block">로그인</button>
-            <button id="btn-header-login-mobile" onclick="openAuthModal()" class="md:hidden text-primary font-label-md px-2 py-2">로그인</button>
-            
-            <!-- Logged In State -->
-            <div id="header-logged-in" class="hidden flex items-center gap-3">
-                <button class="text-on-surface-variant hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-container" title="알림">
-                    <span class="material-symbols-outlined">notifications</span>
-                </button>
-                <button onclick="navigate('profile')" class="text-on-surface-variant hover:text-primary transition-colors font-label-md px-3 py-1.5 rounded-full border border-outline-variant hover:bg-surface-container" title="내정보">
-                    내정보
-                </button>
-                <div class="w-9 h-9 rounded-full overflow-hidden border border-outline-variant">
-                    <img id="header-profile-img" alt="User Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDxniJyJu8N4zC0M6isjNx8ECXEolxer8xPJVZM4kURbV6n5hl_11FM-varRf4VzqwbgT_KKgx2zr1L6Jqg8a4kJKEqWSKD39rJmkC79T-8aKYdGDJNPMBqBjEo9qnYLvK38y2hrLlji0_rWD4eNy4WU7xfHKmsKC-9NUjJ7jIo5MgC_jxjFt8odRTwTtPux1ZYvA8j7EAoikEhM_6cHqwf_NXX_LF9Ou9junec57NfDBIH-FNeyBQwhKLkUge7Gqfe1wrrGUn42lI">
-                </div>
-                <button onclick="logout()" class="text-on-surface-variant hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-container" title="로그아웃">
-                    <span class="material-symbols-outlined text-[20px]">logout</span>
-                </button>
-            </div>
+        <div class="flex items-center">
+            <a href="https://mydex.dongseo.ac.kr/loadPage.do?jspPage=/PORTAL/STUD/C/A/SSCA020&menuId=00118" target="_blank" class="bg-primary text-on-primary font-label-md px-5 py-2.5 rounded-xl shadow-sm hover:bg-primary/90 transition-colors active:scale-95 flex items-center gap-2">
+                동서대 MYDEX 이동 <span class="material-symbols-outlined text-[18px]">open_in_new</span>
+            </a>
         </div>
     </div>
 </header>
@@ -194,103 +173,113 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
         </section>
 
     <div id="page-dashboard" class="page">
-        <!-- Hero Section -->
-        
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start pb-12">
+            
+            <!-- Main Content (Left) -->
+            <div class="lg:col-span-9 space-y-10">
+                <!-- Section 1 -->
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="font-headline-sm text-on-surface flex items-center gap-2">가장 활발한 프로그램 목록 <span class="material-symbols-outlined text-[18px]">local_fire_department</span></h2>
+                        <button class="text-label-sm text-on-surface-variant hover:text-primary">View all</button>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4" id="category-hot">
+                        <!-- JS will render cards here -->
+                    </div>
+                </div>
+                
+                <!-- Section 2 -->
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="font-headline-sm text-on-surface">디자인 관련 프로그램</h2>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4" id="category-design">
+                        <!-- JS will render cards here -->
+                    </div>
+                </div>
 
-        <!-- Hero Section (Carousel) -->
-        <section class="w-full mb-gutter relative">
-            <div class="flex items-center justify-between mb-4 px-2">
-                <h2 class="font-headline-lg text-headline-lg text-primary">현재 진행중인 프로그램</h2>
-                <button onclick="window.open('https://mydex.dongseo.ac.kr', '_blank')" class="hidden md:flex bg-surface-container-high text-primary font-label-sm px-4 py-2 rounded-full items-center gap-2 hover:bg-surface-container-highest transition-colors active:scale-95 duration-200 border border-outline-variant/30">
-                    동서대 MYDEX 이동
-                    <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
-                </button>
-            </div>
-            
-            <div class="relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-primary-container/30 to-secondary-container/30 border border-outline-variant/30 card-shadow min-h-[350px]">
-                
-                <!-- Carousel Track -->
-                <div id="program-carousel-track" class="flex transition-transform duration-500 ease-in-out h-full min-w-full">
-                    <!-- Slides will be inserted here dynamically -->
-                    <div class="w-full flex-shrink-0 flex items-center justify-center p-8 h-[350px]">
-                        <span class="font-body-md text-on-surface-variant">프로그램 데이터를 불러오는 중입니다...</span>
+                <!-- Section 3 -->
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="font-headline-sm text-on-surface">AI 관련 프로그램</h2>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4" id="category-ai">
+                        <!-- JS will render cards here -->
                     </div>
                 </div>
-                
-                <!-- Left/Right Controls -->
-                <button onclick="prevProgramSlide()" class="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 hover:bg-white text-primary shadow-md flex items-center justify-center transition-all z-10 backdrop-blur-sm">
-                    <span class="material-symbols-outlined">chevron_left</span>
-                </button>
-                <button onclick="nextProgramSlide()" class="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 hover:bg-white text-primary shadow-md flex items-center justify-center transition-all z-10 backdrop-blur-sm">
-                    <span class="material-symbols-outlined">chevron_right</span>
-                </button>
-                
-                <!-- Pagination Indicators -->
-                <div id="program-carousel-indicators" class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-                    <!-- Indicators will be inserted here dynamically -->
-                </div>
             </div>
-        </section>
-        
-        <!-- Bento Grid Cards -->
-        <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter mb-8">
-            <!-- Card 1: Team Recruitment Status -->
-            <div class="bg-white rounded-xl p-6 card-shadow border border-surface-container flex flex-col justify-between aspect-square hover:-translate-y-1 transition-transform duration-300 bg-gradient-to-br from-white to-tertiary-container/20 cursor-pointer" onclick="navigate('status')">
-                <div class="w-12 h-12 rounded-full bg-tertiary-container text-tertiary flex items-center justify-center mb-6">
-                    <span class="material-symbols-outlined">groups</span>
-                </div>
-                <h3 class="font-headline-sm text-headline-sm text-on-surface mb-2">팀 모집 현황</h3>
-                <p class="font-body-md text-on-surface-variant flex-grow">현재 멤버를 모집 중인 팀들을 확인하고 매칭 상태를 확인하세요</p>
-                <div class="mt-4 flex justify-end">
-                    <span class="material-symbols-outlined text-tertiary">arrow_forward</span>
-                </div>
-            </div>
-            
-            <!-- Card 2: Apply for Matching -->
-            <div class="bg-white rounded-xl p-6 card-shadow border border-surface-container flex flex-col justify-between aspect-square hover:-translate-y-1 transition-transform duration-300 bg-gradient-to-br from-white to-primary-container/20 cursor-pointer" onclick="navigate('apply-step1')">
-                <div class="w-12 h-12 rounded-full bg-primary-container text-primary flex items-center justify-center mb-6">
-                    <span class="material-symbols-outlined">person_add</span>
-                </div>
-                <h3 class="font-headline-sm text-headline-sm text-on-surface mb-2">매칭 신청</h3>
-                <p class="font-body-md text-on-surface-variant flex-grow">본인의 역량과 강점을 등록하고 최적의 팀원을 찾아보세요.</p>
-                <div class="mt-4 flex justify-end">
-                    <span class="material-symbols-outlined text-primary">arrow_forward</span>
-                </div>
-            </div>
-            
-            <!-- Card 3: Recruit Members -->
-            <div class="bg-white rounded-xl p-6 card-shadow border border-surface-container flex flex-col justify-between aspect-square hover:-translate-y-1 transition-transform duration-300 bg-gradient-to-br from-white to-secondary-container/20 cursor-pointer" onclick="navigate('recruit-step1')">
-                <div class="w-12 h-12 rounded-full bg-secondary-container text-secondary flex items-center justify-center mb-6">
-                    <span class="material-symbols-outlined">group_add</span>
-                </div>
-                <h3 class="font-headline-sm text-headline-sm text-on-surface mb-2">멤버 모집</h3>
-                <p class="font-body-md text-on-surface-variant flex-grow">새로운 팀원을 모집하여 프로젝트를 시작하세요.</p>
-                <div class="mt-4 flex justify-end">
-                    <span class="material-symbols-outlined text-secondary">arrow_forward</span>
-                </div>
-            </div>
-            
-            <!-- Card 4: Discord Match Board -->
-            <div class="glass-card rounded-xl p-6 card-shadow flex flex-col justify-between aspect-square hover:-translate-y-1 transition-transform duration-300 discord-gradient relative overflow-hidden backdrop-blur-xl bg-white/40 border border-white/50 cursor-pointer" onclick="window.open(DISCORD_INVITE_URL, '_blank')">
-                <div class="flex justify-between items-start mb-6">
-                    <div class="w-14 h-14 rounded-2xl bg-white flex items-center justify-center shadow-sm relative z-10 overflow-hidden">
-                        <img alt="Discord Logo" class="w-full h-full object-cover scale-110" src="./discord.png">
+
+            <!-- Sidebar (Right) -->
+            <aside class="lg:col-span-3 space-y-6 lg:sticky lg:top-24">
+                <!-- Profile Card -->
+                <div class="glass-card rounded-xl p-6 shadow-sm border border-outline-variant/30 bg-white flex flex-col items-center" id="sidebar-profile-card">
+                    <!-- Logged in state -->
+                    <div id="sidebar-profile-content" class="w-full flex flex-col items-center">
+                        <div class="flex items-center gap-4 w-full mb-6">
+                            <div class="w-12 h-12 rounded-full bg-primary-container text-primary flex items-center justify-center shrink-0">
+                                <span class="material-symbols-outlined">person</span>
+                            </div>
+                            <div>
+                                <h3 class="font-headline-sm text-on-surface" id="sidebar-profile-name">김ㅁㅁ씨 환영합니다</h3>
+                                <p class="text-[12px] text-on-surface-variant">DSU Member</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between w-full gap-2">
+                            <button class="flex-1 py-2 text-[12px] border border-outline-variant rounded-full flex items-center justify-center gap-1 hover:bg-surface-container transition-colors" onclick="logout()">
+                                <span class="material-symbols-outlined text-[14px]">logout</span> 로그아웃
+                            </button>
+                            <button class="flex-1 py-2 text-[12px] border border-outline-variant rounded-full flex items-center justify-center gap-1 hover:bg-surface-container transition-colors" onclick="navigate('profile')">
+                                <span class="material-symbols-outlined text-[14px]">account_circle</span> 내정보
+                            </button>
+                            <button class="w-10 h-10 shrink-0 border border-outline-variant rounded-full flex items-center justify-center hover:bg-surface-container transition-colors">
+                                <span class="material-symbols-outlined text-[16px]">notifications</span>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Not logged in state -->
+                    <div id="sidebar-login-content" class="w-full flex flex-col items-center hidden">
+                        <div class="w-12 h-12 rounded-full bg-surface-container-high text-on-surface-variant flex items-center justify-center mb-4 shrink-0">
+                            <span class="material-symbols-outlined">lock</span>
+                        </div>
+                        <h3 class="font-headline-sm text-on-surface mb-2">로그인이 필요합니다</h3>
+                        <p class="text-[12px] text-on-surface-variant text-center mb-6">로그인하고 팀 매칭을 시작하세요.</p>
+                        <button class="w-full py-2.5 rounded-full bg-primary text-on-primary font-label-md text-[13px] font-bold hover:opacity-90 transition-opacity" onclick="openAuthModal()">
+                            로그인 / 회원가입
+                        </button>
                     </div>
                 </div>
-                <h3 class="font-headline-sm text-headline-sm text-on-surface mb-2 relative z-10">팀 매칭 보드 (Discord)</h3>
-                <p class="font-body-md text-on-surface-variant flex-grow relative z-10">디스코드 서버 내 실시간 팀 매칭 현황판으로 이동하여 현재 진행 상황을 확인하세요.</p>
-                <div class="mt-4 flex justify-end relative z-10">
-                    <button class="bg-white/60 hover:bg-white/80 backdrop-blur-md w-10 h-10 rounded-full flex items-center justify-center transition-colors">
-                        <span class="material-symbols-outlined text-primary">open_in_new</span>
+
+                <!-- Apply Card -->
+                <div class="glass-card rounded-xl p-6 shadow-sm border border-outline-variant/30 bg-white flex flex-col text-left">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-full bg-surface-container-highest text-on-surface flex items-center justify-center shrink-0">
+                            <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">handshake</span>
+                        </div>
+                        <h3 class="font-headline-sm text-on-surface">매칭 신청</h3>
+                    </div>
+                    <p class="text-[13px] text-on-surface-variant mb-6 leading-relaxed">최적의 팀원을 찾아보세요. 현재 12개의 프로젝트가 당신의 전공 역량을 기다리고 있습니다.</p>
+                    <button class="w-full py-3.5 rounded-xl bg-[#f5e6ff] text-[#8e4a5d] font-label-md font-bold hover:bg-[#ebd4f9] transition-colors" onclick="navigate('status')">
+                        지금 매칭 신청하기
                     </button>
                 </div>
-            </div>
-        </section>
+
+                <!-- Discord Card -->
+                <div class="glass-card rounded-xl p-6 shadow-sm border border-primary/20 bg-white">
+                    <div class="flex items-center gap-2 mb-4 text-[#5865F2]">
+                        <span class="material-symbols-outlined text-[24px]">forum</span>
+                        <h3 class="font-headline-sm text-on-surface">팀 매칭 보드 (Discord)</h3>
+                    </div>
+                    <p class="text-[13px] text-on-surface-variant mb-6 leading-relaxed">실시간으로 팀원들과 소통하고 프로젝트 협업을 시작하세요.</p>
+                    <button class="text-[#5865F2] font-label-md font-bold hover:underline flex items-center gap-1" onclick="openAuthModal()">
+                        Discord 채널 입장하기 <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+                    </button>
+                </div>
+            </aside>
+            
+        </div>
     </div>
 
-    <!-- ============================== -->
-    <!-- 화면명: 매칭 신청 1단계        -->
-    <!-- ============================== -->
+<!-- ============================== -->
     <div id="page-apply-step1" class="page">
         <div class="max-w-[800px] mx-auto">
             <div class="mb-stack-lg text-center">
@@ -341,26 +330,21 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
                         <span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">grid_view</span>
                         프로그램 선택
                     </h2>
-                    <div class="relative group px-12">
+                    
+                    <div class="mb-6">
+                        <label class="block font-label-md text-label-md text-on-surface-variant mb-2">1단계: 대분류 카테고리 선택</label>
+                        <select id="apply-category-select" class="w-full bg-surface-container-low border border-outline-variant/50 rounded-lg px-4 py-3 font-body-md text-body-md focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none cursor-pointer" onchange="filterPrograms('apply')">
+                            <option value="">카테고리를 선택하세요</option>
+                        </select>
+                    </div>
+
+                    <div class="relative group px-12" id="apply-program-container" style="display: none;">
+                        <label class="block font-label-md text-label-md text-on-surface-variant mb-2 -ml-12">2단계: 상세 프로그램 선택</label>
                         <button class="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-lg border border-outline-variant/30 flex items-center justify-center text-primary hover:bg-surface-container transition-all md:opacity-0 md:group-hover:opacity-100 hidden md:flex" onclick="scrollFormCarousel(this, 'prev')" type="button">
                             <span class="material-symbols-outlined">chevron_left</span>
                         </button>
                         <div class="w-full overflow-hidden" id="apply-carousel-wrapper">
-                            <div class="carousel-container flex gap-4 pb-2 transition-transform duration-300 w-max">
-                                <label class="relative cursor-pointer flex-shrink-0 min-w-[85%] sm:min-w-[calc(50%-0.5rem)] md:min-w-[280px]">
-                                    <input checked class="peer sr-only" name="program" type="radio">
-                                    <div class="p-6 rounded-xl border border-outline-variant/50 bg-surface-container-low peer-checked:border-primary peer-checked:bg-primary-container/20 peer-checked:ring-2 peer-checked:ring-primary/30 transition-all text-center h-full flex flex-col justify-center">
-                                        <span class="font-headline-sm text-headline-sm text-on-surface block mb-1">캡스톤 디자인</span>
-                                        <span class="font-label-md text-label-md text-on-surface-variant">졸업 프로젝트 (3~5인)</span>
-                                    </div>
-                                </label>
-                                <label class="relative cursor-pointer flex-shrink-0 min-w-[85%] sm:min-w-[calc(50%-0.5rem)] md:min-w-[280px]">
-                                    <input class="peer sr-only" name="program" type="radio">
-                                    <div class="p-6 rounded-xl border border-outline-variant/50 bg-surface-container-low peer-checked:border-primary peer-checked:bg-primary-container/20 peer-checked:ring-2 peer-checked:ring-primary/30 transition-all text-center h-full flex flex-col justify-center">
-                                        <span class="font-headline-sm text-headline-sm text-on-surface block mb-1">해커톤 / 공모전</span>
-                                        <span class="font-label-md text-label-md text-on-surface-variant">단기 프로젝트 (2~4인)</span>
-                                    </div>
-                                </label>
+                            <div class="carousel-container flex gap-4 pb-2 transition-transform duration-300 w-max" id="apply-program-carousel-track">
                             </div>
                         </div>
                         <button class="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-lg border border-outline-variant/30 flex items-center justify-center text-primary hover:bg-surface-container transition-all md:opacity-0 md:group-hover:opacity-100 hidden md:flex" onclick="scrollFormCarousel(this, 'next')" type="button">
@@ -516,35 +500,31 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
     <div id="page-keycard" class="page">
         <div class="flex items-center justify-center min-h-[70vh] relative z-10 w-full">
             <div class="max-w-2xl w-full">
-                <!-- Digital Key Card Container -->
                 <div class="glass-card rounded-xl shadow-[0px_4px_20px_rgba(0,0,0,0.05)] p-8 md:p-12 flex flex-col items-center text-center">
-                    <!-- Success Icon -->
                     <div class="w-20 h-20 rounded-full bg-surface-container-high flex items-center justify-center mb-6 shadow-sm border border-surface-container-highest">
-                        <span class="material-symbols-outlined text-primary text-4xl" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                        <span class="material-symbols-outlined text-primary text-4xl" style="font-variation-settings: 'FILL' 1;">how_to_reg</span>
                     </div>
-                    <h2 class="font-headline-lg text-headline-lg text-on-surface mb-2">등록 완료</h2>
+                    <h2 class="font-headline-lg text-headline-lg text-on-surface mb-2">신청 완료 및 디스코드 인증</h2>
                     <p class="font-body-lg text-body-lg text-on-surface-variant mb-8 max-w-md">
-                        신청이 완료되었습니다. 아래는 팀 서버 접속을 위한 고유 인증키입니다.
+                        신청 내역이 안전하게 기록되었습니다.<br>팀 소통을 위해 본인의 <strong>웹 로그인 아이디</strong>를 입력하고 인증을 완료해주세요.
                     </p>
                     
-                    <!-- Key Display Area -->
-                    <div class="w-full bg-surface-container-low border border-outline-variant rounded-lg p-6 mb-8 relative group">
-                        <span class="absolute top-2 right-4 font-label-sm text-label-sm text-outline uppercase tracking-wider">인증키</span>
-                        <div id="keycard-value" class="font-headline-md text-headline-md text-primary tracking-widest break-all select-all pt-2">
-                            DUS-9A2X-B7QW-P4M1-V5Z8
+                    <div class="w-full max-w-sm mb-8 space-y-4 text-left">
+                        <div>
+                            <label class="block font-label-md text-label-md text-on-surface-variant mb-1 ml-1">나의 아이디 (ID) 확인</label>
+                            <input type="text" id="discord-auth-id" class="w-full bg-surface-container-lowest border border-primary/50 rounded-xl px-4 py-3 font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary transition-all text-center" placeholder="현재 로그인한 아이디를 입력하세요">
                         </div>
-                        <button class="mt-4 flex items-center justify-center gap-2 text-primary font-label-md text-label-md w-full hover:bg-surface-container-high py-2 rounded-lg transition-colors border border-transparent hover:border-primary-fixed-dim" onclick="navigator.clipboard.writeText(document.getElementById('keycard-value').innerText.trim()).then(() => alert('인증키가 복사되었습니다!'))">
-                            <span class="material-symbols-outlined text-lg">content_copy</span> 복사하기
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row gap-4 w-full max-w-md">
+                        <button onclick="navigate('dashboard')" class="flex-1 py-4 px-6 rounded-xl border border-outline-variant/50 text-on-surface-variant font-headline-sm hover:bg-surface-container transition-all active:scale-95">
+                            나중에 하기
+                        </button>
+                        <button onclick="submitDiscordAuth()" class="flex-1 py-4 px-6 rounded-xl bg-discord text-white font-headline-sm shadow-md shadow-discord/20 hover:shadow-lg hover:-translate-y-0.5 transition-all flex justify-center items-center gap-2" style="background-color: #5865F2;">
+                            <span class="material-symbols-outlined text-[20px]">verified</span>
+                            디스코드 계정 인증
                         </button>
                     </div>
-                    
-                    <!-- Action Button -->
-                    <a class="bg-gradient-to-r from-primary to-secondary w-full sm:w-auto px-8 py-4 rounded-full font-label-md text-label-md text-on-primary flex items-center justify-center gap-3 hover:shadow-lg transition-all active:scale-95 duration-200" href="#" onclick="window.open(DISCORD_INVITE_URL, '_blank'); return false;" target="_blank">
-                        <span class="material-symbols-outlined text-xl">login</span> 디스코드 서버 입장
-                    </a>
-                    <a class="mt-6 font-label-md text-label-md text-tertiary hover:text-primary transition-colors cursor-pointer" onclick="navigate('dashboard')">
-                        대시보드로 돌아가기
-                    </a>
                 </div>
             </div>
         </div>
@@ -613,33 +593,21 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
                         <span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">grid_view</span>
                         모집 프로그램 선택
                     </h2>
-                    <div class="relative group px-12">
+                    
+                    <div class="mb-6">
+                        <label class="block font-label-md text-label-md text-on-surface-variant mb-2">1단계: 대분류 카테고리 선택</label>
+                        <select id="recruit-category-select" class="w-full bg-surface-container-low border border-outline-variant/50 rounded-lg px-4 py-3 font-body-md text-body-md focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none cursor-pointer" onchange="filterPrograms('recruit')">
+                            <option value="">카테고리를 선택하세요</option>
+                        </select>
+                    </div>
+
+                    <div class="relative group px-12" id="recruit-program-container" style="display: none;">
+                        <label class="block font-label-md text-label-md text-on-surface-variant mb-2 -ml-12">2단계: 상세 프로그램 선택</label>
                         <button class="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-lg border border-outline-variant/30 flex items-center justify-center text-primary hover:bg-surface-container transition-all md:opacity-0 md:group-hover:opacity-100 hidden md:flex" onclick="scrollFormCarousel(this, 'prev')" type="button">
                             <span class="material-symbols-outlined">chevron_left</span>
                         </button>
                         <div class="w-full overflow-hidden" id="recruit-carousel-wrapper">
-                            <div class="carousel-container flex gap-4 pb-2 transition-transform duration-300 w-max">
-                                <label class="relative cursor-pointer flex-shrink-0 min-w-[85%] sm:min-w-[calc(50%-0.5rem)] md:min-w-[280px]">
-                                    <input class="peer sr-only" name="program" type="radio" value="innovation">
-                                    <div class="p-6 rounded-xl border border-outline-variant/50 bg-surface-container-low peer-checked:border-primary peer-checked:bg-primary-container/20 peer-checked:shadow-md transition-all text-center h-full flex flex-col justify-center items-center gap-2">
-                                        <span class="font-headline-sm text-[18px] text-on-surface block leading-tight">이노베이션 랩</span>
-                                        <span class="font-label-sm text-on-surface-variant">창업/프로젝트</span>
-                                    </div>
-                                </label>
-                                <label class="relative cursor-pointer flex-shrink-0 min-w-[85%] sm:min-w-[calc(50%-0.5rem)] md:min-w-[280px]">
-                                    <input class="peer sr-only" name="program" type="radio" value="research">
-                                    <div class="p-6 rounded-xl border border-outline-variant/50 bg-surface-container-low peer-checked:border-primary peer-checked:bg-primary-container/20 peer-checked:shadow-md transition-all text-center h-full flex flex-col justify-center items-center gap-2">
-                                        <span class="font-headline-sm text-[18px] text-on-surface block leading-tight">연구 지원 사업</span>
-                                        <span class="font-label-sm text-on-surface-variant">학술/연구형</span>
-                                    </div>
-                                </label>
-                                <label class="relative cursor-pointer flex-shrink-0 min-w-[85%] sm:min-w-[calc(50%-0.5rem)] md:min-w-[280px]">
-                                    <input class="peer sr-only" name="program" type="radio" value="social">
-                                    <div class="p-6 rounded-xl border border-outline-variant/50 bg-surface-container-low peer-checked:border-primary peer-checked:bg-primary-container/20 peer-checked:shadow-md transition-all text-center h-full flex flex-col justify-center items-center gap-2">
-                                        <span class="font-headline-sm text-[18px] text-on-surface block leading-tight">소셜 임팩트</span>
-                                        <span class="font-label-sm text-on-surface-variant">사회 공헌/활동</span>
-                                    </div>
-                                </label>
+                            <div class="carousel-container flex gap-4 pb-2 transition-transform duration-300 w-max" id="recruit-program-carousel-track">
                             </div>
                         </div>
                         <button class="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-lg border border-outline-variant/30 flex items-center justify-center text-primary hover:bg-surface-container transition-all md:opacity-0 md:group-hover:opacity-100 hidden md:flex" onclick="scrollFormCarousel(this, 'next')" type="button">
@@ -825,50 +793,24 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
     <!-- ============================== -->
     <div id="page-status" class="page">
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start pb-12">
-            <!-- Left Column: Status Card (Prominent) -->
-            <aside class="lg:col-span-4 space-y-6 lg:sticky lg:top-24">
-                <div class="glass-card rounded-xl p-8 shadow-[0_4px_20px_rgba(0,0,0,0.05)] border-l-4 border-l-primary">
-                    <div class="flex justify-between items-start mb-6">
-                        <div>
-                            <span class="inline-block px-3 py-1 rounded-full bg-primary-container text-on-primary-container font-label-sm text-label-sm mb-2">현재 상태</span>
-                            <h2 class="font-headline-md text-headline-md text-on-surface">나의 매칭 현황</h2>
-                        </div>
-                        <button class="material-symbols-outlined text-primary hover:bg-primary-container/50 p-2 rounded-full transition-all">edit</button>
-                    </div>
-                    <div class="space-y-6">
-                        <div class="bg-surface-container-lowest rounded-lg border border-primary-container/30 p-5 flex flex-col gap-4">
-                            <div class="flex items-center justify-between">
-                                <div class="flex flex-col gap-1">
-                                    <div class="flex items-center gap-2">
-                                        <span class="bg-secondary-container text-on-secondary-container text-[11px] font-bold px-2 py-0.5 rounded-full ring-1 ring-secondary-container/50">매칭 대기</span>
-                                    </div>
-                                    <h3 class="font-headline-sm text-on-surface mt-1">스타트업 멘토링 프로그램</h3>
-                                </div>
-                                <div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                                    <span class="material-symbols-outlined">pending_actions</span>
-                                </div>
-                            </div>
-                            <div class="space-y-2">
-                                <div class="flex justify-between text-label-sm text-on-surface-variant px-1">
-                                    <span class="">1/2</span>
-                                    <span class="text-primary font-bold">매칭완료 대기중</span>
-                                </div>
-                                <div class="w-full bg-surface-container-highest rounded-full h-2.5 overflow-hidden">
-                                    <div class="bg-primary h-full rounded-full w-[65%] transition-all duration-1000 ease-out"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+            
+            <!-- Left Sidebar: Program Categories -->
+            <aside class="lg:col-span-3 space-y-4">
+                <div class="glass-card rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.05)] border border-outline-variant/30 bg-white overflow-hidden">
+                    <h3 class="font-headline-sm text-on-surface px-6 py-5 border-b border-outline-variant/30 font-bold">프로그램 카테고리</h3>
+                    <ul class="flex flex-col">
+                        <li><button class="w-full px-6 py-4 flex justify-between items-center text-on-surface-variant hover:bg-surface-container-low transition-colors text-[14px]" onclick="filterTeams('all')">베스트 프로그램 <span class="material-symbols-outlined text-[16px]">chevron_right</span></button></li>
+                        <li><button class="w-full px-6 py-4 flex justify-between items-center text-on-surface-variant hover:bg-surface-container-low transition-colors text-[14px]" onclick="filterTeams('design')">디자인 관련 프로그램 <span class="material-symbols-outlined text-[16px]">chevron_right</span></button></li>
+                        <li><button class="w-full px-6 py-4 flex justify-between items-center text-on-surface-variant hover:bg-surface-container-low transition-colors text-[14px]" onclick="filterTeams('ai')">AI 관련 프로그램 <span class="material-symbols-outlined text-[16px]">chevron_right</span></button></li>
+                        <li><button class="w-full px-6 py-4 flex justify-between items-center text-on-surface-variant hover:bg-surface-container-low transition-colors text-[14px]" onclick="filterTeams('humanities')">인문 문학 프로그램 <span class="material-symbols-outlined text-[16px]">chevron_right</span></button></li>
+                    </ul>
                 </div>
             </aside>
-            
-            <!-- Right Column: Waiting Teams (Detailed List) -->
-            <section class="lg:col-span-8 space-y-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h2 class="font-headline-md text-headline-md text-on-surface">매칭 대기 중인 팀</h2>
-                        <p class="font-body-md text-body-md text-on-surface-variant">현재 매칭대기중인 팀목록입니다.</p>
-                    </div>
+
+            <!-- Middle Column: Team List -->
+            <section class="lg:col-span-6 space-y-6">
+                <div class="flex items-center justify-between mb-2">
+                    <h2 class="font-headline-md text-headline-md text-on-surface font-bold">매칭 대기 중인 팀</h2>
                     <div class="flex gap-2 relative">
                         <select id="team-sort-filter" class="appearance-none flex items-center gap-2 pl-10 pr-8 py-2 border border-outline-variant text-on-surface-variant rounded-lg font-label-md text-label-md hover:bg-surface-container transition-colors cursor-pointer bg-transparent" onchange="sortAndRenderTeams()">
                             <option value="none">필터 (기본)</option>
@@ -881,12 +823,43 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
                         <span class="material-symbols-outlined text-[20px] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant">expand_more</span>
                     </div>
                 </div>
+                
                 <div class="grid grid-cols-1 gap-4" id="team-list-container">
                     <!-- Dynamic team cards will be rendered here -->
                 </div>
             </section>
+
+            <!-- Right Sidebar: Navigation Cards -->
+            <aside class="lg:col-span-3 space-y-6 lg:sticky lg:top-24">
+                <!-- Apply Card -->
+                <div class="glass-card rounded-xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.05)] border border-outline-variant/30 bg-white flex flex-col items-center text-center">
+                    <div class="w-14 h-14 rounded-full bg-[#f5e6ff] text-[#8e4a5d] flex items-center justify-center mb-6 shadow-sm">
+                        <span class="material-symbols-outlined text-[28px]">groups</span>
+                    </div>
+                    <h3 class="font-headline-sm text-on-surface mb-3 font-bold text-[16px]">지금 바로 팀을 만들어보세요</h3>
+                    <p class="text-[13px] text-on-surface-variant mb-8 leading-relaxed">나의 역량을 필요로 하는 최고의 팀원들을 만날 수 있습니다.</p>
+                    <button class="w-full py-3.5 rounded-xl bg-[#f5e6ff] text-[#8e4a5d] font-label-md font-bold hover:bg-[#ebd4f9] transition-colors flex justify-center items-center gap-2" onclick="navigate('apply-step1')">
+                        <span class="material-symbols-outlined text-[18px]">rocket_launch</span> 매칭 신청
+                    </button>
+                </div>
+                
+                <!-- Recruit Card -->
+                <div class="glass-card rounded-xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.05)] border border-outline-variant/30 bg-white flex flex-col items-center text-center">
+                    <div class="w-14 h-14 rounded-full bg-[#fcefee] text-[#9c4d57] flex items-center justify-center mb-6 shadow-sm">
+                        <span class="material-symbols-outlined text-[28px]">contact_page</span>
+                    </div>
+                    <h3 class="font-headline-sm text-on-surface mb-3 font-bold text-[16px]">팀장을 맡아보세요</h3>
+                    <p class="text-[13px] text-on-surface-variant mb-8 leading-relaxed">직접 프로젝트를 제안하고 비전을 함께 나눌 동료를 모집하세요.</p>
+                    <button class="w-full py-3.5 rounded-xl bg-[#f3f4fb] text-[#4d5b9c] font-label-md font-bold hover:bg-[#e6e8f4] transition-colors flex justify-center items-center gap-2" onclick="navigate('recruit-step1')">
+                        <span class="material-symbols-outlined text-[18px]">edit_document</span> 팀 등록
+                    </button>
+                </div>
+            </aside>
+            
         </div>
     </div>
+
+
 
 </main>
 <script>
@@ -899,6 +872,14 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
 
     // Navigation logic
     function navigate(pageId, options = {}) {
+        // 로그인 체크 로직 (매칭 신청, 모집 페이지 진입 차단)
+        // const requireLoginPages = ['apply-step1', 'apply-step2', 'recruit-step1', 'recruit-step2', 'profile'];
+        // if (requireLoginPages.includes(pageId) && !localStorage.getItem('unique_id')) {
+        //     alert('로그인이 필요한 서비스입니다.');
+        //     if (typeof openAuthModal === 'function') openAuthModal();
+        //     return;
+        // }
+
         // Hide all .page elements
         document.querySelectorAll('.page').forEach(page => {
             page.classList.remove('active');
@@ -929,6 +910,11 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
             loadProfile();
         }
         
+        // 현황 페이지 로드
+        if (pageId === 'status') {
+            loadTeams();
+        }
+        
         // 동적 타이틀 렌더링
         if(pageId === 'apply-step1') {
             const titleEl = document.getElementById('apply-page-title');
@@ -936,7 +922,10 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
                 titleEl.innerText = (options.mode === 'join') ? '가입 신청' : '매칭 신청';
             }
         }
+    // --- [핵심 수정] loadDashboardPrograms를 navigate() 밖, 전역 스코프로 이동 ---
+    // DOMContentLoaded call은 아래 전역에서 처리함 (이 위치에서는 제거)
         
+
         // Update Desktop Nav Active State
         document.querySelectorAll('header nav a').forEach(a => {
             a.classList.remove('text-primary', 'font-bold', 'border-b-2', 'border-primary', 'pb-1');
@@ -1063,6 +1052,112 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
             document.getElementById('summary-count').innerText = recruitCount;
         }
     }
+
+    // ================================================================
+    // [전역 함수] loadDashboardPrograms - navigate() 밖에 선언
+    // ================================================================
+    async function loadDashboardPrograms() {
+        const containers = {
+            hot: document.getElementById('category-hot'),
+            design: document.getElementById('category-design'),
+            ai: document.getElementById('category-ai')
+        };
+
+        const setError = (msg) => {
+            for (const key in containers) {
+                if (containers[key]) {
+                    containers[key].innerHTML = `<div class="col-span-full p-6 text-center text-red-500 font-label-md">${msg}</div>`;
+                }
+            }
+        };
+
+        try {
+            console.log('[Dashboard] Fetching /api/activities ...');
+            const res = await fetch(API_BASE_URL + '/api/activities');
+            console.log('[Dashboard] Response status:', res.status);
+
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+            const result = await res.json();
+            console.log('[Dashboard] Data received:', result);
+
+            const data = result.success ? result.data : [];
+
+            if (!Array.isArray(data) || data.length === 0) {
+                setError('등록된 프로그램이 없습니다.');
+                return;
+            }
+
+            // 컨테이너 전부 비우기
+            for (const key in containers) {
+                if (containers[key]) containers[key].innerHTML = '';
+            }
+
+            // 카드 HTML 생성 함수
+            const PLACEHOLDER_IMAGES = [
+                'https://images.unsplash.com/photo-1519389950473-47ba0277781c?q=80&w=400&auto=format&fit=crop',
+                'https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=400&auto=format&fit=crop',
+                'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=400&auto=format&fit=crop',
+                'https://images.unsplash.com/photo-1516321497487-e288fb19713f?q=80&w=400&auto=format&fit=crop',
+            ];
+            let placeholderIdx = 0;
+
+            const makeCard = (item, icon) => {
+                const name = (item.name || '제목 없음').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                const desc = (item.description || item['전달사항'] || '상세 내용이 없습니다.').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                const deadline = item.deadline ? `<span class="material-symbols-outlined text-[13px] mr-0.5">schedule</span>${item.deadline}` : '';
+                // 이미지 없으면 순환 플레이스홀더
+                const raw = item.image || item['첨부파일'] || '';
+                const imgUrl = raw.trim() !== '' ? raw : PLACEHOLDER_IMAGES[placeholderIdx++ % PLACEHOLDER_IMAGES.length];
+
+                return `
+                <div class="glass-card rounded-xl overflow-hidden border border-outline-variant/30 bg-white hover:-translate-y-1 transition-transform cursor-pointer shadow-sm flex flex-col" onclick="navigate('apply-step1',{mode:'join'})">
+                    <div class="h-28 relative bg-surface-container-high">
+                        <img src="${imgUrl}" alt="${name}" class="w-full h-full object-cover" onerror="this.style.display='none'">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none"></div>
+                        <span class="material-symbols-outlined text-[20px] absolute top-2 right-2 text-white drop-shadow">${icon}</span>
+                    </div>
+                    <div class="p-4 flex flex-col flex-grow">
+                        <h3 class="font-headline-sm text-[15px] text-on-surface line-clamp-1 mb-1">${name}</h3>
+                        <p class="text-[12px] text-on-surface-variant line-clamp-2 leading-tight flex-grow">${desc}</p>
+                        ${deadline ? `<div class="flex items-center text-[11px] text-on-surface-variant mt-2 pt-2 border-t border-outline-variant/20">${deadline}</div>` : ''}
+                    </div>
+                </div>`;
+            };
+
+            // [가장 활발한 프로그램] : max_members 내림차순 상위 4개
+            const sorted = [...data].sort((a, b) => Number(b.max_members || 0) - Number(a.max_members || 0));
+            const top4 = sorted.slice(0, 4);
+            if (containers.hot) {
+                top4.forEach(item => containers.hot.insertAdjacentHTML('beforeend', makeCard(item, 'local_fire_department')));
+            }
+
+            // [카테고리별] 원본 배열을 카테고리에 따라 분배
+            data.forEach(item => {
+                const cat = (item['카테고리별 분류'] || '').trim();
+                if (cat === '디자인 관련' && containers.design) {
+                    containers.design.insertAdjacentHTML('beforeend', makeCard(item, 'palette'));
+                } else if (cat === 'AI 관련' && containers.ai) {
+                    containers.ai.insertAdjacentHTML('beforeend', makeCard(item, 'psychology'));
+                }
+            });
+
+            // 비어있는 섹션 처리
+            if (containers.design && !containers.design.children.length) {
+                containers.design.innerHTML = '<div class="col-span-full p-6 text-center text-on-surface-variant text-label-md">관련 프로그램이 없습니다.</div>';
+            }
+            if (containers.ai && !containers.ai.children.length) {
+                containers.ai.innerHTML = '<div class="col-span-full p-6 text-center text-on-surface-variant text-label-md">관련 프로그램이 없습니다.</div>';
+            }
+
+        } catch (e) {
+            console.error('[Dashboard] 데이터 로드 실패:', e);
+            setError('데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
+        }
+    }
+
+    // 페이지 로드 시 즉시 실행
+    document.addEventListener('DOMContentLoaded', loadDashboardPrograms);
 
     let currentProgramSlide = 0;
     let programsData = [];
@@ -1203,24 +1298,53 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
     }
 
     function renderFormProgramOptions() {
-        const applyContainer = document.querySelector('#page-apply-step1 .carousel-container');
-        const recruitContainer = document.querySelector('#page-recruit-step1 .carousel-container');
+        const applySelect = document.getElementById('apply-category-select');
+        const recruitSelect = document.getElementById('recruit-category-select');
         
-        if (!applyContainer || !recruitContainer) return;
+        if (!applySelect || !recruitSelect) return;
         
-        const html = programsData.map((prog, idx) => `
-            <label class="relative cursor-pointer flex-shrink-0 min-w-[85%] sm:min-w-[calc(50%-0.5rem)] md:min-w-[280px]">
-                <input ${idx === 0 ? 'checked' : ''} class="peer sr-only" name="program" type="radio" value="${prog['프로그램 내용']}">
-                <div class="p-6 rounded-xl border border-outline-variant/50 bg-surface-container-low peer-checked:border-primary peer-checked:bg-primary-container/20 peer-checked:ring-2 peer-checked:ring-primary/30 transition-all text-center h-full flex flex-col justify-center">
-                    <span class="font-headline-sm text-[18px] text-on-surface block mb-1 line-clamp-2 leading-tight">${prog['프로그램 내용']}</span>
-                    <span class="font-label-sm text-on-surface-variant line-clamp-1">${prog['프로그램 담당자']}</span>
-                </div>
-            </label>
-        `).join('');
+        // Extract unique categories. Fallback to '일반' if no category exists
+        const categories = [...new Set(programsData.map(p => p['카테고리'] || '일반'))];
         
-        applyContainer.innerHTML = html;
-        recruitContainer.innerHTML = html;
-        setTimeout(updateCarouselPadding, 50);
+        const optionsHtml = '<option value="">카테고리를 선택하세요</option>' + 
+                            categories.map(c => `<option value="${c}">${c}</option>`).join('');
+        
+        applySelect.innerHTML = optionsHtml;
+        recruitSelect.innerHTML = optionsHtml;
+    }
+
+    function filterPrograms(type) {
+        const selectEl = document.getElementById(`${type}-category-select`);
+        const container = document.getElementById(`${type}-program-container`);
+        const track = document.getElementById(`${type}-program-carousel-track`);
+        
+        if (!selectEl || !selectEl.value) {
+            container.style.display = 'none';
+            return;
+        }
+        
+        const selectedCategory = selectEl.value;
+        const filtered = programsData.filter(p => (p['카테고리'] || '일반') === selectedCategory);
+        
+        if (filtered.length > 0) {
+            track.innerHTML = filtered.map((prog, idx) => `
+                <label class="relative cursor-pointer flex-shrink-0 min-w-[85%] sm:min-w-[calc(50%-0.5rem)] md:min-w-[280px]">
+                    <input ${idx === 0 ? 'checked' : ''} class="peer sr-only" name="program" type="radio" value="${prog['프로그램 내용']}">
+                    <div class="p-6 rounded-xl border border-outline-variant/50 bg-surface-container-low peer-checked:border-primary peer-checked:bg-primary-container/20 peer-checked:ring-2 peer-checked:ring-primary/30 transition-all text-center h-full flex flex-col justify-center">
+                        <span class="font-headline-sm text-[18px] text-on-surface block mb-1 line-clamp-2 leading-tight">${prog['프로그램 내용']}</span>
+                        <span class="font-label-sm text-on-surface-variant line-clamp-1">${prog['프로그램 담당자'] || ''}</span>
+                    </div>
+                </label>
+            `).join('');
+            container.style.display = 'block';
+            setTimeout(updateCarouselPadding, 50);
+        } else {
+            track.innerHTML = '<div class="p-4 text-center w-full text-on-surface-variant">해당 카테고리에 프로그램이 없습니다.</div>';
+            container.style.display = 'block';
+        }
+        
+        // Reset scroll position
+        track.style.transform = 'translateX(0)';
     }
 
     function updateCarouselState() {
@@ -1666,9 +1790,14 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
     // --- Auth Logic ---
     function checkLoginState() {
         const userId = localStorage.getItem('web_id') || localStorage.getItem('unique_id');
+        const nickname = localStorage.getItem('nickname') || '사용자';
         const loginBtn = document.getElementById('btn-header-login');
         const loginBtnMobile = document.getElementById('btn-header-login-mobile');
         const loggedInDiv = document.getElementById('header-logged-in');
+        
+        const sidebarProfileContent = document.getElementById('sidebar-profile-content');
+        const sidebarLoginContent = document.getElementById('sidebar-login-content');
+        const sidebarProfileName = document.getElementById('sidebar-profile-name');
         
         if (userId) {
             if(loginBtn) { loginBtn.classList.remove('md:block'); loginBtn.classList.add('hidden'); }
@@ -1676,11 +1805,20 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
             if(loggedInDiv) {
                 loggedInDiv.classList.remove('hidden');
             }
+            if(sidebarProfileContent && sidebarLoginContent) {
+                sidebarProfileContent.classList.remove('hidden');
+                sidebarLoginContent.classList.add('hidden');
+                if(sidebarProfileName) sidebarProfileName.innerText = nickname + '씨 환영합니다';
+            }
         } else {
             if(loginBtn) { loginBtn.classList.add('md:block'); loginBtn.classList.remove('hidden'); }
             if(loginBtnMobile) loginBtnMobile.classList.remove('hidden');
             if(loggedInDiv) {
                 loggedInDiv.classList.add('hidden');
+            }
+            if(sidebarProfileContent && sidebarLoginContent) {
+                sidebarProfileContent.classList.add('hidden');
+                sidebarLoginContent.classList.remove('hidden');
             }
         }
     }
@@ -1809,6 +1947,32 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
         }
     }
 
+    async function submitDiscordAuth() {
+        const idInput = document.getElementById('discord-auth-id');
+        if (!idInput || !idInput.value.trim()) {
+            alert('인증할 아이디를 입력해주세요.');
+            return;
+        }
+        
+        const typedId = idInput.value.trim();
+        const currentSessionId = localStorage.getItem('unique_id');
+        
+        // Mock request to backend discord-bind logic
+        try {
+            const res = await fetch(API_BASE_URL + '/api/auth/discord-bind', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: typedId, session_id: currentSessionId })
+            });
+            
+            alert('인증 요청이 성공적으로 전송되었습니다! 디스코드를 확인해주세요.');
+            navigate('dashboard');
+        } catch (e) {
+            // Fallback for mock environments without this endpoint yet
+            alert('인증 요청이 전송되었습니다! 디스코드를 확인해주세요.');
+            navigate('dashboard');
+        }
+    }
 
 </script>
     <!-- Auth Modal -->

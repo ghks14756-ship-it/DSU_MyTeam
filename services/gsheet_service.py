@@ -9,6 +9,7 @@ services/gsheet_service.py
   4. '매칭_대기_라인' 탭에서 대기자 목록 조회 (fetch_applications)
 """
 
+import time
 import logging
 import asyncio
 import secrets
@@ -22,6 +23,15 @@ log = logging.getLogger("DSUMyTeam.GSheet")
 class GoogleSheetService:
     """구글 시트 DB 연동 서비스."""
 
+    # ── OAuth2 클라이언트 캐시 (토큰 유효 3600s → 3500s 후 갱신) ──────────
+    _gspread_client = None
+    _gspread_client_expiry: float = 0.0
+
+    # ── 시트 데이터 캐시 (API Rate Limit 방지, 60초 TTL) ─────────────────
+    _data_cache: dict = {}
+    _data_cache_expiry: dict = {}
+    CACHE_TTL: int = 60  # 읽기 캐시 유효 시간 (초)
+
     def __init__(self):
         from config import Config
         self.credentials_file = Config.GSHEET_CREDENTIALS_FILE
@@ -33,22 +43,50 @@ class GoogleSheetService:
         self.worksheet_members = "회원_정보"  # [신규] 웹 회원 테이블
 
     def _get_client(self):
-        """gspread 클라이언트 생성 (동기)"""
+        """gspread 클라이언트 반환. OAuth2 토큰을 클래스 변수에 캐싱하여 매 호출마다 재인증 방지."""
+        now = time.time()
+        if GoogleSheetService._gspread_client and now < GoogleSheetService._gspread_client_expiry:
+            return GoogleSheetService._gspread_client
+
         import gspread
         from oauth2client.service_account import ServiceAccountCredentials
-
         scope = [
             "https://spreadsheets.google.com/feeds",
             "https://www.googleapis.com/auth/drive",
         ]
-        creds = ServiceAccountCredentials.from_json_keyfile_name(
-            self.credentials_file, scope
-        )
-        return gspread.authorize(creds)
+        creds = ServiceAccountCredentials.from_json_keyfile_name(self.credentials_file, scope)
+        GoogleSheetService._gspread_client = gspread.authorize(creds)
+        GoogleSheetService._gspread_client_expiry = now + 3500
+        log.info("[GSheet] OAuth2 클라이언트 갱신 완료 (다음 갱신: ~58분 후)")
+        return GoogleSheetService._gspread_client
 
     def _is_configured(self) -> bool:
         """구글 시트 연동이 설정되어 있는지 확인."""
         return bool(self.spreadsheet_id and self.spreadsheet_id != "YOUR_SPREADSHEET_ID_HERE")
+
+    def _cached_records(self, ws, cache_key: str) -> list:
+        """시트 전체 데이터를 CACHE_TTL(60초) 동안 캐싱하여 반환.
+        캐시가 유효하면 API 호출 없이 즉시 반환.
+        """
+        now = time.time()
+        cls = GoogleSheetService
+        if cache_key in cls._data_cache and now < cls._data_cache_expiry.get(cache_key, 0):
+            log.debug(f"[Cache HIT] '{cache_key}'")
+            return cls._data_cache[cache_key]
+        data = ws.get_all_records()
+        cls._data_cache[cache_key] = data
+        cls._data_cache_expiry[cache_key] = now + cls.CACHE_TTL
+        log.debug(f"[Cache MISS] '{cache_key}': {len(data)}행 캐싱 완료")
+        return data
+
+    def _invalidate(self, *cache_keys: str) -> None:
+        """쓰기 작업 완료 후 해당 시트의 캐시를 즉시 무효화하여 다음 읽기에 최신 데이터 반환."""
+        cls = GoogleSheetService
+        for key in cache_keys:
+            removed = cls._data_cache.pop(key, None)
+            cls._data_cache_expiry.pop(key, None)
+            if removed is not None:
+                log.debug(f"[Cache INVALIDATED] '{key}'")
 
     async def get_cached_sheets(self) -> dict:
         """Fallback Search를 위해 주요 시트 데이터를 일괄 캐싱."""
@@ -130,16 +168,18 @@ class GoogleSheetService:
     # ══════════════════════════════════════════════════════════════
 
     async def get_programs(self) -> List[Dict[str, str]]:
-        """웹 캐러셀용 프로그램 목록 반환."""
+        """웹 캐러셀용 프로그램 목록 반환. (60초 캐싱 적용)"""
         if not self._is_configured():
             return []
         try:
             loop = asyncio.get_running_loop()
             client = await loop.run_in_executor(None, self._get_client)
+            ws_name = self.worksheet_programs
 
             def _fetch():
-                sheet = client.open_by_key(self.spreadsheet_id).worksheet(self.worksheet_programs)
-                return sheet.get_all_records()
+                doc = client.open_by_key(self.spreadsheet_id)
+                ws = doc.worksheet(ws_name)
+                return self._cached_records(ws, ws_name)
 
             return await loop.run_in_executor(None, _fetch)
         except Exception as e:
@@ -319,7 +359,10 @@ class GoogleSheetService:
                 ws_waiting.append_row(waiting_row)
                 return True
 
-            return await loop.run_in_executor(None, _append)
+            result = await loop.run_in_executor(None, _append)
+            # 쓰기 완료 후 두 시트 캐시 무효화
+            self._invalidate(self.worksheet_users, self.worksheet_waiting)
+            return result
         except Exception as e:
             log.error(f"[record_application] 실패: {e}")
             return False
@@ -370,7 +413,10 @@ class GoogleSheetService:
                 ws_team.append_row(team_row)
                 return True
 
-            return await loop.run_in_executor(None, _append)
+            result = await loop.run_in_executor(None, _append)
+            # 쓰기 완료 후 캐시 무효화
+            self._invalidate(self.worksheet_users, self.worksheet_team_line)
+            return result
         except Exception as e:
             log.error(f"[record_recruitment] 실패: {e}")
             return False
@@ -380,17 +426,16 @@ class GoogleSheetService:
     # ══════════════════════════════════════════════════════════════
 
     async def get_teams(self) -> List[Dict[str, Any]]:
-        """현황 페이지용 팀 목록 반환."""
+        """현황 페이지용 팀 목록 반환. (60초 캐싱 적용)"""
         try:
             loop = asyncio.get_running_loop()
             client = await loop.run_in_executor(None, self._get_client)
-            if not client:
-                return []
+            ws_name = self.worksheet_team_line
 
             def _fetch():
                 doc = client.open_by_key(self.spreadsheet_id)
-                ws = doc.worksheet(self.worksheet_team_line)
-                return ws.get_all_records()
+                ws = doc.worksheet(ws_name)
+                return self._cached_records(ws, ws_name)
 
             return await loop.run_in_executor(None, _fetch)
         except Exception as e:
@@ -422,7 +467,9 @@ class GoogleSheetService:
                         return True
                 return False
 
-            return await loop.run_in_executor(None, _update)
+            result = await loop.run_in_executor(None, _update)
+            self._invalidate(self.worksheet_users)  # 인증 후 users 시트 캐시 무효화
+            return result
         except Exception as e:
             log.error(f"[update_auth_status] 실패: {e}")
             return False
@@ -482,24 +529,28 @@ class GoogleSheetService:
                 sheet.append_row(row)
                 return True
 
-            return await loop.run_in_executor(None, _append)
+            result = await loop.run_in_executor(None, _append)
+            self._invalidate(self.worksheet_members)  # 신규 회원 추가 후 캐시 무효화
+            return result
         except Exception as e:
             log.error(f"[register_member] 실패: {e}")
             return False
 
     async def get_member_by_id(self, web_id: str) -> Dict[str, Any] | None:
         """
-        Web_ID로 회원_정보 탭 조회 → 로그인 검증에 사용.
+        Web_ID로 회원_정보 탭 조회 → 로그인 검증에 사용. (60초 캐싱)
         """
         if not self._is_configured():
             return None
         try:
             loop = asyncio.get_running_loop()
             client = await loop.run_in_executor(None, self._get_client)
+            ws_name = self.worksheet_members
 
             def _find():
-                sheet = client.open_by_key(self.spreadsheet_id).worksheet(self.worksheet_members)
-                records = sheet.get_all_records()
+                doc = client.open_by_key(self.spreadsheet_id)
+                ws = doc.worksheet(ws_name)
+                records = self._cached_records(ws, ws_name)
                 for r in records:
                     if str(r.get("Web_ID", "")).strip() == web_id:
                         return r
@@ -534,66 +585,80 @@ class GoogleSheetService:
             return None
 
     async def update_last_login(self, identifier: str, is_web_id: bool = True) -> bool:
-        """[신규] 로그인 성공 시 회원_정보 탭의 최근_접속일시 업데이트"""
+        """[신규] 로그인 성공 시 회원_정보 탭의 최근_접속일시 업데이트. 쓰기 후 캐시 무효화."""
         if not self._is_configured():
             return False
         try:
             loop = asyncio.get_running_loop()
             client = await loop.run_in_executor(None, self._get_client)
-            now = datetime.now(timezone.utc).isoformat()
+            now_str = datetime.now(timezone.utc).isoformat()
+            ws_name = self.worksheet_members
 
             def _update():
-                sheet = client.open_by_key(self.spreadsheet_id).worksheet(self.worksheet_members)
+                doc = client.open_by_key(self.spreadsheet_id)
+                sheet = doc.worksheet(ws_name)
+                header = sheet.row_values(1)
+                # 헤더에서 동적으로 최근_접속일시 컬럼 위치 조회
+                try:
+                    login_col = header.index('최근_접속일시') + 1
+                except ValueError:
+                    login_col = 8  # fallback: H열
+                match_field = 'Web_ID' if is_web_id else 'Unique_ID'
                 records = sheet.get_all_records()
                 for i, row in enumerate(records):
-                    match_val = str(row.get("Web_ID", "") if is_web_id else row.get("Unique_ID", ""))
-                    if match_val == identifier:
-                        # 8번째 컬럼이 최근_접속일시 (A=1, B=2, C=3, D=4, E=5, F=6, G=7, H=8)
-                        # 컬럼 개수: Web_ID, 닉네임, Unique_ID, Discord_ID, 연동_코드, Auth_Status, 가입일자, 최근_접속일시
-                        sheet.update_cell(i + 2, 8, now)
+                    if str(row.get(match_field, '')) == identifier:
+                        sheet.update_cell(i + 2, login_col, now_str)
                         return True
                 return False
 
-            return await loop.run_in_executor(None, _update)
+            result = await loop.run_in_executor(None, _update)
+            self._invalidate(ws_name)  # 쓰기 완료 후 캐시 무효화
+            return result if result is not None else False
         except Exception as e:
             log.error(f"[update_last_login] 실패: {e}")
+            return False
+
     async def get_user_profile(self, unique_id: str) -> Dict[str, Any] | None:
         """
-        내정보 화면용 통합 데이터 조회
-        이름(통합_사용자_관리), 닉네임/이메일/Web_ID(회원_정보), 스케줄(매칭_대기_라인)
+        내정보 화면용 통합 데이터 조회 (60초 캐싱 적용)
+        이름(통합_사용자_관리), 닉네임/이메일/Web_ID(회원_정보), 스케줄(회원_정보 우선, 매칭_대기_라인 fallback)
         """
         if not self._is_configured():
             return None
         try:
             loop = asyncio.get_running_loop()
             client = await loop.run_in_executor(None, self._get_client)
+            ws_users = self.worksheet_users
+            ws_members = self.worksheet_members
+            ws_waiting = self.worksheet_waiting
 
             def _fetch():
                 doc = client.open_by_key(self.spreadsheet_id)
-                # 1. 통합_사용자_관리 (이름 조회)
-                users_ws = doc.worksheet(self.worksheet_users)
-                users = users_ws.get_all_records()
+
+                # ① 통합_사용자_관리: 이름 조회 (캐싱)
+                users = self._cached_records(doc.worksheet(ws_users), ws_users)
                 user_info = next((r for r in users if str(r.get("Unique_ID", "")).strip() == unique_id), None)
                 if not user_info:
                     return None
-                
-                # 2. 회원_정보 (Web_ID, 닉네임, 이메일)
-                members_ws = doc.worksheet(self.worksheet_members)
-                members = members_ws.get_all_records()
+
+                # ② 회원_정보: Web_ID / 닉네임 / 이메일 / 스케줄 (캐싱)
+                members = self._cached_records(doc.worksheet(ws_members), ws_members)
                 member_info = next((r for r in members if str(r.get("Unique_ID", "")).strip() == unique_id), {})
-                
-                # 3. 매칭_대기_라인 (스케줄)
-                wait_ws = doc.worksheet(self.worksheet_waiting)
-                waits = wait_ws.get_all_records()
-                wait_info = next((r for r in waits if str(r.get("Unique_ID", "")).strip() == unique_id), {})
-                
+
+                # ③ 스케줄 우선순위: 회원_정보 → 매칭_대기_라인 (fallback)
+                schedule_data = member_info.get("스케줄", "")
+                if not schedule_data:
+                    waits = self._cached_records(doc.worksheet(ws_waiting), ws_waiting)
+                    wait_info = next((r for r in waits if str(r.get("Unique_ID", "")).strip() == unique_id), {})
+                    schedule_data = wait_info.get("주간_활동_가능_시간", "")
+
                 return {
                     "unique_id": unique_id,
                     "name": user_info.get("이름", ""),
                     "web_id": member_info.get("Web_ID", ""),
                     "nickname": member_info.get("닉네임", ""),
                     "email": member_info.get("이메일", ""),
-                    "schedule": wait_info.get("주간_활동_가능_시간", "")
+                    "schedule": schedule_data
                 }
 
             return await loop.run_in_executor(None, _fetch)
@@ -602,71 +667,96 @@ class GoogleSheetService:
             return None
 
     async def update_user_profile(self, unique_id: str, nickname: str, email: str, schedule: str) -> bool:
-        """내정보 업데이트 (회원_정보 및 매칭_대기_라인)"""
+        """내정보 업데이트 (회원_정보 + 매칭_대기_라인). 동적 컬럼 조회 + 쓰기 후 캐시 무효화."""
         if not self._is_configured():
             return False
         try:
             loop = asyncio.get_running_loop()
             client = await loop.run_in_executor(None, self._get_client)
+            ws_members = self.worksheet_members
+            ws_waiting = self.worksheet_waiting
 
             def _update():
                 doc = client.open_by_key(self.spreadsheet_id)
-                
-                # 1. 회원_정보 업데이트 (닉네임, 이메일)
-                # 컬럼: 1:Web_ID, 2:닉네임, 3:Unique_ID, ..., 9:이메일, 10:프로필이미지
-                members_ws = doc.worksheet(self.worksheet_members)
+
+                # ① 회원_정보 업데이트 — 헤더에서 컬럼 위치 동적 조회 (HIGH-4 fix)
+                members_ws = doc.worksheet(ws_members)
+
+                # K열(11번째) 스케줄 컬럼 보장
+                if members_ws.col_count < 11:
+                    members_ws.add_cols(11 - members_ws.col_count)
+                header = members_ws.row_values(1)
+                if len(header) < 11 or header[10] != '스케줄':
+                    members_ws.update_cell(1, 11, '스케줄')
+                    header = members_ws.row_values(1)
+
+                def _col(name, fallback):
+                    try:
+                        return header.index(name) + 1
+                    except ValueError:
+                        log.warning(f"[update_user_profile] 헤더에서 '{name}' 컬럼 미발견, fallback={fallback}")
+                        return fallback
+
+                nickname_col  = _col('닉네임', 2)
+                email_col     = _col('이메일', 9)
+                schedule_col  = _col('스케줄', 11)
+
                 members = members_ws.get_all_records()
+                updated_member = False
                 for i, row in enumerate(members):
-                    if str(row.get("Unique_ID", "")).strip() == unique_id:
-                        members_ws.update_cell(i + 2, 2, nickname)
-                        members_ws.update_cell(i + 2, 9, email)
+                    if str(row.get('Unique_ID', '')).strip() == unique_id:
+                        members_ws.update_cell(i + 2, nickname_col, nickname)
+                        members_ws.update_cell(i + 2, email_col, email)
+                        members_ws.update_cell(i + 2, schedule_col, schedule)
+                        updated_member = True
                         break
-                        
-                # 2. 매칭_대기_라인 업데이트 (스케줄)
-                # 컬럼: 1:Unique_ID, ..., 8:주간_활동_가능_시간
-                wait_ws = doc.worksheet(self.worksheet_waiting)
+
+                # ② 매칭_대기_라인 업데이트 (해당 유저가 신청한 경우에만)
+                wait_ws = doc.worksheet(ws_waiting)
+                wait_header = wait_ws.row_values(1)
+                try:
+                    sched_wait_col = wait_header.index('주간_활동_가능_시간') + 1
+                except ValueError:
+                    sched_wait_col = 11  # fallback
+
                 waits = wait_ws.get_all_records()
                 for i, row in enumerate(waits):
-                    if str(row.get("Unique_ID", "")).strip() == unique_id:
-                        wait_ws.update_cell(i + 2, 8, schedule)
+                    if str(row.get('Unique_ID', '')).strip() == unique_id:
+                        wait_ws.update_cell(i + 2, sched_wait_col, schedule)
                         break
-                        
+
                 return True
 
-            return await loop.run_in_executor(None, _update)
+            result = await loop.run_in_executor(None, _update)
+            # 쓰기 완료 후 두 시트 캐시 즉시 무효화
+            self._invalidate(ws_members, ws_waiting)
+            return result
         except Exception as e:
             log.error(f"[update_user_profile] 실패: {e}")
             return False
 
     async def get_user_status(self, unique_id: str) -> Dict[str, Any]:
         """
-        unique_id 기반 매칭 진행 3단계 상태 반환.
-        
-        반환 형식:
-        {
-            "stage": 1|2|3,
-            "label": "대기 중" | "매칭 완료" | "팀 결성",
-            "detail": "...",
-            "team_info": {...} | None
-        }
+        unique_id 기반 매칭 진행 3단계 상태 반환. (60초 캐싱 적용)
         """
         if not self._is_configured():
             return {"stage": 0, "label": "미신청", "detail": "시트 설정 오류", "team_info": None}
-            
+
         try:
             loop = asyncio.get_running_loop()
             client = await loop.run_in_executor(None, self._get_client)
-            
+            ws_waiting = self.worksheet_waiting
+            ws_team = self.worksheet_team_line
+
             def _check():
                 doc = client.open_by_key(self.spreadsheet_id)
-                # 1, 2단계: 매칭 대기 라인 확인
-                ws_wait = doc.worksheet(self.worksheet_waiting)
-                wait_records = ws_wait.get_all_records()
+
+                # 1, 2단계: 매칭 대기 라인 (캐싱)
+                wait_records = self._cached_records(doc.worksheet(ws_waiting), ws_waiting)
                 user_wait = next((r for r in wait_records if str(r.get("Unique_ID", "")).strip() == unique_id), None)
-                
-                # 3단계: 팀 관리 라인 확인
-                ws_team = doc.worksheet(self.worksheet_team_line)
-                team_records = ws_team.get_all_records()
+
+                # 3단계: 팀 관리 라인 (캐싱)
+                team_records = self._cached_records(doc.worksheet(ws_team), ws_team)
                 user_team = next((r for r in team_records if str(r.get("Leader_Unique_ID", "")).strip() == unique_id), None)
 
                 if user_team and user_team.get("Team_Status", "") == "결성완료":

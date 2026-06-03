@@ -47,17 +47,19 @@ class DatabaseManager:
                 department      TEXT NOT NULL,
                 skill           TEXT NOT NULL,
                 activity_id     INTEGER,
+                program         TEXT DEFAULT '',
                 group_code      TEXT DEFAULT NULL,
-                applied_at      TEXT NOT NULL,            -- 신청 시각 (ISO8601 UTC)
-                expires_at      TEXT NOT NULL,            -- 만료 시각 (7일 후)
+                applied_at      TEXT NOT NULL,
+                expires_at      TEXT NOT NULL,
                 is_matched      INTEGER DEFAULT 0,
                 team_id         INTEGER DEFAULT NULL,
-                contact         TEXT DEFAULT '',           -- 연락 수단 (DM 교차 발송용)
-                weekly_schedule TEXT DEFAULT '',           -- 주간 스케줄 (팀 리포트용)
-                has_conditions  INTEGER DEFAULT 0,         -- 희망 조건 여부 (0=없음, 1=있음)
-                conditions      TEXT DEFAULT '[]',         -- JSON 배열: 희망 조건 목록
-                is_leader       INTEGER DEFAULT 0,         -- 팀장 권한 여부 (3일 후 승급 가능)
-                day3_dm_sent    INTEGER DEFAULT 0,         -- 3일차 DM 발송 여부
+                contact         TEXT DEFAULT '',
+                weekly_schedule TEXT DEFAULT '',
+                has_conditions  INTEGER DEFAULT 0,
+                conditions      TEXT DEFAULT '[]',
+                is_leader       INTEGER DEFAULT 0,
+                day3_dm_sent    INTEGER DEFAULT 0,
+                expiry_dm_sent  INTEGER DEFAULT 0,
                 FOREIGN KEY (activity_id) REFERENCES activities(id)
             );
 
@@ -76,6 +78,7 @@ class DatabaseManager:
             CREATE TABLE IF NOT EXISTS team_rooms (
                 id               INTEGER PRIMARY KEY AUTOINCREMENT,
                 activity_id      INTEGER,
+
                 leader_id        TEXT NOT NULL,
                 team_name        TEXT NOT NULL,
                 required_skills  TEXT DEFAULT '[]',
@@ -119,6 +122,11 @@ class DatabaseManager:
             "ALTER TABLE applications ADD COLUMN conditions TEXT DEFAULT '[]'",
             "ALTER TABLE applications ADD COLUMN is_leader INTEGER DEFAULT 0",
             "ALTER TABLE applications ADD COLUMN day3_dm_sent INTEGER DEFAULT 0",
+            "ALTER TABLE applications ADD COLUMN program TEXT DEFAULT ''",
+            "ALTER TABLE applications ADD COLUMN expiry_dm_sent INTEGER DEFAULT 0",
+            "ALTER TABLE applications ADD COLUMN pending_approval INTEGER DEFAULT 0",
+            "ALTER TABLE applications ADD COLUMN pending_team_leader_id TEXT DEFAULT NULL",
+            "ALTER TABLE applications ADD COLUMN pending_since TEXT DEFAULT NULL",
         ]
         for stmt in alter_stmts:
             try:
@@ -140,6 +148,7 @@ class DatabaseManager:
         department: str,
         skill: str,
         activity_id: int | None = None,
+        program: str = "",
         group_code: str | None = None,
         contact: str = "",
         weekly_schedule: str = "",
@@ -149,6 +158,7 @@ class DatabaseManager:
     ) -> dict:
         """
         신청 데이터를 DB에 저장 (1인 1신청 중복 방지 로직 포함).
+        program: 선택한 활동 프로그램 이름 (프로그램별 독립 매칭에 사용)
         """
         from datetime import timedelta
         now = datetime.now(timezone.utc)
@@ -171,12 +181,12 @@ class DatabaseManager:
         await self._conn.execute("""
             INSERT INTO applications
                 (discord_id, username, student_id, department, skill,
-                 activity_id, group_code, applied_at, expires_at,
+                 activity_id, program, group_code, applied_at, expires_at,
                  contact, weekly_schedule, has_conditions, conditions, is_leader)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             discord_id, username, student_id, department, skill,
-            activity_id, group_code,
+            activity_id, program, group_code,
             now.isoformat(), expires.isoformat(),
             contact, weekly_schedule,
             1 if has_conditions else 0, cond_json,
@@ -202,8 +212,10 @@ class DatabaseManager:
             row = await cursor.fetchone()
             return dict(row) if row else None
 
-    async def get_all_active_applications(self, activity_id: int | None = None) -> list[dict]:
-        """만료되지 않고 매칭되지 않은 신청 목록."""
+    async def get_all_active_applications(self, activity_id: int | None = None, program: str | None = None) -> list[dict]:
+        """만료되지 않고 매칭되지 않은 신청 목록.
+        program 파라미터 지정 시 해당 프로그램 신청자만 조회. ('' 또는 None 이면 전체)
+        """
         now = datetime.now(timezone.utc).isoformat()
         query = """
             SELECT * FROM applications
@@ -213,19 +225,31 @@ class DatabaseManager:
         if activity_id is not None:
             query += " AND activity_id = ?"
             params.append(activity_id)
+        if program:  # 프로그램 필터 (빈 문자열이면 전체 조회)
+            query += " AND program = ?"
+            params.append(program)
+        query += " ORDER BY applied_at ASC"  # FIFO 선착순 정렬
 
         async with self._conn.execute(query, params) as cursor:
             rows = await cursor.fetchall()
             return [dict(r) for r in rows]
 
     async def get_expired_applications(self) -> list[dict]:
-        """만료된 신청 목록 (아직 삭제 안 된 것)."""
+        """만료된 신청 목록 (아직 DM 안 보낸 것, 7일 데드락 알림용)."""
         now = datetime.now(timezone.utc).isoformat()
         async with self._conn.execute(
-            "SELECT * FROM applications WHERE expires_at <= ? AND is_matched = 0", (now,)
+            "SELECT * FROM applications WHERE expires_at <= ? AND is_matched = 0 AND expiry_dm_sent = 0", (now,)
         ) as cursor:
             rows = await cursor.fetchall()
             return [dict(r) for r in rows]
+
+    async def mark_expiry_dm_sent(self, discord_id: str) -> None:
+        """만료 DM 발송 완료 표시 (중복 발송 방지)."""
+        await self._conn.execute(
+            "UPDATE applications SET expiry_dm_sent = 1 WHERE discord_id = ? AND is_matched = 0",
+            (discord_id,)
+        )
+        await self._conn.commit()
 
     async def delete_application(self, discord_id: str) -> None:
         """신청 삭제."""
@@ -233,6 +257,81 @@ class DatabaseManager:
             "DELETE FROM applications WHERE discord_id = ?", (discord_id,)
         )
         await self._conn.commit()
+
+    async def get_team_applicants(self, program: str, leader_discord_id: str) -> list[dict]:
+        """
+        특정 프로그램의 대기 중 비팀장 신청자 목록.
+        팀장 대시보드에서 '신청서 확인'용으로 사용.
+        pending_approval이 없거나 이미 본인이 pending 중인 신청자 포함.
+        """
+        now = datetime.now(timezone.utc).isoformat()
+        async with self._conn.execute("""
+            SELECT * FROM applications
+            WHERE program = ?
+              AND is_matched = 0
+              AND is_leader = 0
+              AND expires_at > ?
+              AND (pending_approval = 0 OR pending_team_leader_id = ?)
+            ORDER BY applied_at ASC
+        """, (program, now, leader_discord_id)) as cursor:
+            rows = await cursor.fetchall()
+            return [dict(r) for r in rows]
+
+    async def get_my_teams(self, leader_discord_id_prefix: str) -> list[dict]:
+        """
+        팀장이 등록한 팀 목록 (applications 테이블에서 is_leader=1 행).
+        leader_discord_id_prefix: 'WEB_{unique_id}' 형태 매칭용
+        """
+        now = datetime.now(timezone.utc).isoformat()
+        async with self._conn.execute("""
+            SELECT * FROM applications
+            WHERE discord_id LIKE ?
+              AND is_leader = 1
+              AND expires_at > ?
+            ORDER BY applied_at DESC
+        """, (f"{leader_discord_id_prefix}%", now)) as cursor:
+            rows = await cursor.fetchall()
+            return [dict(r) for r in rows]
+
+    async def set_pending_approval(
+        self,
+        applicant_discord_id: str,
+        leader_discord_id: str,
+    ) -> None:
+        """신청자를 '팀장 승인 대기' 상태로 전환."""
+        now = datetime.now(timezone.utc).isoformat()
+        await self._conn.execute("""
+            UPDATE applications
+            SET pending_approval = 1,
+                pending_team_leader_id = ?,
+                pending_since = ?
+            WHERE discord_id = ? AND is_matched = 0
+        """, (leader_discord_id, now, applicant_discord_id))
+        await self._conn.commit()
+
+    async def clear_pending_approval(self, applicant_discord_id: str) -> None:
+        """승인 대기 상태 초기화 (거부 또는 24시간 만료 시)."""
+        await self._conn.execute("""
+            UPDATE applications
+            SET pending_approval = 0,
+                pending_team_leader_id = NULL,
+                pending_since = NULL
+            WHERE discord_id = ? AND is_matched = 0
+        """, (applicant_discord_id,))
+        await self._conn.commit()
+
+    async def get_expired_pending_approvals(self) -> list[dict]:
+        """24시간이 지난 승인 대기 목록 (대기열 복귀 처리용)."""
+        from datetime import timedelta
+        threshold = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+        async with self._conn.execute("""
+            SELECT * FROM applications
+            WHERE pending_approval = 1
+              AND pending_since <= ?
+              AND is_matched = 0
+        """, (threshold,)) as cursor:
+            rows = await cursor.fetchall()
+            return [dict(r) for r in rows]
 
     async def mark_matched(self, discord_id: str, team_id: int, username: str | None = None) -> None:
         """매칭 완료 처리. 동일 discord_id 다수 신청 처리용으로 username도 확인"""

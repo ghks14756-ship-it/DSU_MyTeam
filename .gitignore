@@ -7,3 +7,18 @@ __pycache__/
 *.pyc
 data/
 .vercel
+
+# 임시/빌드 파일
+scratch/
+scratch_*.py
+build_*.py
+fix_*.py
+update_*.py
+apply_*.py
+add_*.py
+migrate_*.py
+check_*.py
+original_index.html
+test.json
+cloudflared.exe
+token.json

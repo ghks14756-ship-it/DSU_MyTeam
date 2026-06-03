@@ -30,7 +30,7 @@ class Config:
     MATCH_CHECK_INTERVAL_SECONDS: int = 60   # 이벤트 드리븐 매칭 체크 주기 (1분)
     DAY3_REMIND_HOURS: int = 72              # 3일 경과 시 DM 알림 (72h)
     DAY3_REMIND_CHECK_INTERVAL: int = 300    # 3일 체크 주기 (5분)
-    MIN_QUEUE_SIZE_FOR_MATCH: int = 2        # 자동 매칭 최소 대기자 수
+    MIN_QUEUE_SIZE_FOR_MATCH: int = 2        # 자동 매칭 최소 대기자 수 (테스트 편의 유지)
 
     # ── 채널/역할 이름 템플릿 ─────────────────────
     TEAM_TEXT_CHANNEL_PREFIX: str = "팀-텍스트"
@@ -38,8 +38,9 @@ class Config:
     TEAM_CATEGORY_NAME: str = "🔒 MYDEX 팀룸"
 
     # ── 랜덤 매칭 ─────────────────────────────────
-    DEFAULT_TEAM_SIZE: int = 2               # 기본 팀 인원
-    DEADLINE_WARNING_HOURS: int = 6          # 마감 N시간 전 경고
+    DEFAULT_TEAM_SIZE: int = 4               # 기본 팀 인원 (명세: 4명)
+    LEADER_DASHBOARD_POOL_SIZE: int = 10     # 팀장 대시보드에 노출할 랜덤 대기자 수
+    DEADLOCK_WARNING_HOURS: int = 168        # 7일 데드락 만료 시 실패 알림
 
     # ── 테스트 모드 ───────────────────────────────
     # TODO(테스트 종료 시 반드시 False로 변경할 것!)

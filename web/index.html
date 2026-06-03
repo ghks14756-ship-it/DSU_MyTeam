@@ -54,7 +54,7 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
 .discord-gradient { background: linear-gradient(135deg, rgba(233, 213, 255, 0.5) 0%, rgba(253, 208, 234, 0.5) 100%); }
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-.schedule-grid { display: grid; grid-template-columns: 80px repeat(7, 1fr); grid-template-rows: auto repeat(8, 1fr); }
+.schedule-grid { display: grid; grid-template-columns: 80px repeat(7, 1fr); grid-template-rows: auto repeat(15, 1fr); }
 .time-slot:hover { background-color: var(--primary-container); opacity: 0.5; }
 .time-slot.active { background: linear-gradient(135deg, #d2bfe8 0%, #ffd8ed 100%); border-color: transparent; }
 @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -236,7 +236,7 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
                         <h3 class="font-headline-sm text-on-surface">매칭 신청</h3>
                     </div>
                     <p class="text-[13px] text-on-surface-variant mb-6 leading-relaxed">최적의 팀원을 찾아보세요. 현재 12개의 프로젝트가 당신의 전공 역량을 기다리고 있습니다.</p>
-                    <button class="w-full py-3.5 rounded-xl bg-[#f5e6ff] text-[#8e4a5d] font-label-md font-bold hover:bg-[#ebd4f9] transition-colors" onclick="navigate('status')">
+                    <button class="w-full py-3.5 rounded-xl bg-[#f5e6ff] text-[#8e4a5d] font-label-md font-bold hover:bg-[#ebd4f9] transition-colors" onclick="if(!localStorage.getItem('unique_id')){ alert('로그인이 필요합니다'); openAuthModal(); } else { navigate('status'); }">
                         지금 매칭 신청하기
                     </button>
                 </div>
@@ -248,11 +248,33 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
                         <h3 class="font-headline-sm text-on-surface">팀 매칭 보드 (Discord)</h3>
                     </div>
                     <p class="text-[13px] text-on-surface-variant mb-6 leading-relaxed">실시간으로 팀원들과 소통하고 프로젝트 협업을 시작하세요.</p>
-                    <button class="text-[#5865F2] font-label-md font-bold hover:underline flex items-center gap-1" onclick="openAuthModal()">
+                    <a href="https://discord.gg/XTD4w2CVRv" target="_blank" class="text-[#5865F2] font-label-md font-bold hover:underline flex items-center gap-1" style="text-decoration: none;">
                         Discord 채널 입장하기 <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+                    </a>
+                </div>
+
+                <!-- 내 팀 현황 Card (팀 등록 후 노출) -->
+                <div id="sidebar-my-teams-card" class="glass-card rounded-xl p-6 shadow-sm border border-secondary/20 bg-white hidden">
+                    <div class="flex items-center gap-2 mb-4">
+                        <div class="w-10 h-10 rounded-full bg-secondary-container text-secondary flex items-center justify-center shrink-0">
+                            <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">groups</span>
+                        </div>
+                        <div>
+                            <h3 class="font-headline-sm text-on-surface">내 팀 현황</h3>
+                            <p class="text-[11px] text-on-surface-variant" id="sidebar-my-teams-subtitle">팀 불러오는 중...</p>
+                        </div>
+                    </div>
+                    <!-- 팀 목록 미니 프리뷰 -->
+                    <div id="sidebar-my-teams-list" class="space-y-2 mb-4">
+                        <!-- JS로 동적 렌더링 -->
+                    </div>
+                    <button onclick="navigate('my-teams')" class="w-full py-2.5 rounded-xl bg-secondary-container text-secondary font-label-md font-bold hover:bg-secondary/20 transition-colors flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-[18px]">manage_accounts</span>
+                        팀 관리 대시보드
                     </button>
                 </div>
             </aside>
+
             
         </div>
     </div>
@@ -372,7 +394,7 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
                         선택하신 조건이 매우 구체적일 경우, 적합한 팀을 찾는 데 다소 시간이 소요될 수 있습니다. 매칭 현황은 하단 탭에서 언제든 확인 가능합니다.
                     </p>
                 </div>
-                <button class="w-full bg-gradient-to-r from-primary to-secondary text-on-primary font-headline-sm text-headline-sm py-4 rounded-xl shadow-lg hover:shadow-xl hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-4" type="button" onclick="navigate('apply-step2')">
+                <button class="w-full bg-gradient-to-r from-primary to-secondary text-on-primary font-headline-sm text-headline-sm py-4 rounded-xl shadow-lg hover:shadow-xl hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-4" type="button" onclick="if(!document.getElementById('apply-category-select').value) { alert('필수 입력: 모집 프로그램을 먼저 선택해주세요.'); document.getElementById('apply-category-select').focus(); return; } navigate('apply-step2');">
                     다음 단계 (상세 정보 입력)
                     <span class="material-symbols-outlined">arrow_forward</span>
                 </button>
@@ -482,26 +504,32 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
                     <div class="w-20 h-20 rounded-full bg-surface-container-high flex items-center justify-center mb-6 shadow-sm border border-surface-container-highest">
                         <span class="material-symbols-outlined text-primary text-4xl" style="font-variation-settings: 'FILL' 1;">how_to_reg</span>
                     </div>
-                    <h2 class="font-headline-lg text-headline-lg text-on-surface mb-2">신청 완료 및 디스코드 인증</h2>
-                    <p class="font-body-lg text-body-lg text-on-surface-variant mb-8 max-w-md">
-                        신청 내역이 안전하게 기록되었습니다.<br>팀 소통을 위해 본인의 <strong>웹 로그인 아이디</strong>를 입력하고 인증을 완료해주세요.
+                    <h2 class="font-headline-lg text-headline-lg text-on-surface mb-2">신청 완료 및 디스코드 입장</h2>
+                    <p class="font-body-lg text-body-lg text-on-surface-variant mb-6 max-w-md">
+                        매칭 준비가 완료되었습니다.<br>원활한 팀 소통 및 매칭 결과를 받으려면 아래 버튼을 눌러 디스코드 서버에 입장해주세요.
                     </p>
                     
-                    <div class="w-full max-w-sm mb-8 space-y-4 text-left">
-                        <div>
-                            <label class="block font-label-md text-label-md text-on-surface-variant mb-1 ml-1">나의 아이디 (ID) 확인</label>
-                            <input type="text" id="discord-auth-id" class="w-full bg-surface-container-lowest border border-primary/50 rounded-xl px-4 py-3 font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary transition-all text-center" placeholder="현재 로그인한 아이디를 입력하세요">
+                    <div class="w-full max-w-md bg-surface-container-low border border-outline-variant/30 rounded-xl p-5 mb-8 text-left shadow-sm">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="material-symbols-outlined text-primary text-[18px]">info</span>
+                            <span class="font-label-md text-on-surface font-bold">진행 가이드라인</span>
                         </div>
+                        <ol class="list-decimal list-inside font-body-sm text-on-surface-variant space-y-2 ml-1">
+                            <li>하단의 <strong>[디스코드 서버 입장]</strong> 버튼 클릭</li>
+                            <li>디스코드 회원가입 및 로그인</li>
+                            <li><strong>DSU_MyTeam</strong> 서버 입장</li>
+                            <li><span class="bg-primary-container text-on-primary-container px-2 py-0.5 rounded-md font-bold text-[12px]">#입장-및-인증</span> 채널에서 인증을 진행해주세요</li>
+                        </ol>
                     </div>
 
                     <div class="flex flex-col sm:flex-row gap-4 w-full max-w-md">
                         <button onclick="navigate('dashboard')" class="flex-1 py-4 px-6 rounded-xl border border-outline-variant/50 text-on-surface-variant font-headline-sm hover:bg-surface-container transition-all active:scale-95">
-                            나중에 하기
+                            메인 화면으로
                         </button>
-                        <button onclick="submitDiscordAuth()" class="flex-1 py-4 px-6 rounded-xl bg-discord text-white font-headline-sm shadow-md shadow-discord/20 hover:shadow-lg hover:-translate-y-0.5 transition-all flex justify-center items-center gap-2" style="background-color: #5865F2;">
-                            <span class="material-symbols-outlined text-[20px]">verified</span>
-                            디스코드 계정 인증
-                        </button>
+                        <a href="https://discord.gg/XTD4w2CVRv" target="_blank" class="flex-1 py-4 px-6 rounded-xl bg-discord text-white font-headline-sm shadow-md shadow-discord/20 hover:shadow-lg hover:-translate-y-0.5 transition-all flex justify-center items-center gap-2" style="background-color: #5865F2; text-decoration: none;">
+                            <span class="material-symbols-outlined text-[20px]">login</span>
+                            디스코드 서버 입장
+                        </a>
                     </div>
                 </div>
             </div>
@@ -646,7 +674,7 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
                 
                 <div class="flex items-center justify-end pt-4 gap-4 mt-stack-lg">
                     <button class="px-8 py-4 rounded-xl border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors active:scale-95" type="button" onclick="navigate('dashboard')">취소</button>
-                    <button class="bg-gradient-to-r from-primary to-secondary px-10 py-4 rounded-xl text-on-primary font-bold shadow-lg flex items-center gap-2 active:scale-95 transition-all" type="button" onclick="navigate('recruit-step2')">
+                    <button class="bg-gradient-to-r from-primary to-secondary px-10 py-4 rounded-xl text-on-primary font-bold shadow-lg flex items-center gap-2 active:scale-95 transition-all" type="button" onclick="if(!document.getElementById('recruit-category-select').value) { alert('필수 입력: 모집 프로그램을 먼저 선택해주세요.'); document.getElementById('recruit-category-select').focus(); return; } navigate('recruit-step2');">
                         다음으로 (1/2) 
                         <span class="material-symbols-outlined" data-icon="arrow_forward">arrow_forward</span>
                     </button>
@@ -770,6 +798,71 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
     </div>
 
     <!-- ============================== -->
+    <!-- 화면명: 내 팀 목록              -->
+    <!-- ============================== -->
+    <div id="page-my-teams" class="page">
+        <div class="max-w-4xl mx-auto pb-12">
+            <!-- 헤더 -->
+            <div class="flex items-center gap-4 mb-8">
+                <button onclick="navigate('dashboard')" class="w-10 h-10 rounded-full border border-outline-variant flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors">
+                    <span class="material-symbols-outlined text-[20px]">arrow_back</span>
+                </button>
+                <div>
+                    <h1 class="font-headline-md text-headline-md text-on-surface font-bold">내 팀 현황</h1>
+                    <p class="text-[13px] text-on-surface-variant mt-0.5">팀장으로 등록한 팀 목록과 신청자 현황을 관리하세요.</p>
+                </div>
+            </div>
+
+            <!-- 팀 목록 컨테이너 -->
+            <div id="my-teams-container" class="space-y-4">
+                <!-- JS 동적 렌더링 -->
+                <div class="flex flex-col items-center justify-center py-20 text-on-surface-variant">
+                    <span class="material-symbols-outlined text-[48px] mb-3 opacity-30">group_search</span>
+                    <p class="text-[15px]">불러오는 중...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================== -->
+    <!-- 화면명: 신청서 확인            -->
+    <!-- ============================== -->
+    <div id="page-applicants" class="page">
+        <div class="max-w-4xl mx-auto pb-12">
+            <!-- 헤더 -->
+            <div class="flex items-center gap-4 mb-2">
+                <button onclick="navigate('my-teams')" class="w-10 h-10 rounded-full border border-outline-variant flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors">
+                    <span class="material-symbols-outlined text-[20px]">arrow_back</span>
+                </button>
+                <div class="flex-1">
+                    <h1 class="font-headline-md text-headline-md text-on-surface font-bold">신청서 확인</h1>
+                    <p class="text-[13px] text-on-surface-variant mt-0.5" id="applicants-program-label">프로그램 신청자 목록</p>
+                </div>
+                <button onclick="loadTeamApplicants(window._currentTeamProgram, window._currentLeaderDid)" class="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-outline-variant text-on-surface-variant text-[13px] hover:bg-surface-container transition-colors">
+                    <span class="material-symbols-outlined text-[16px]">refresh</span> 새로고침
+                </button>
+            </div>
+
+            <!-- 안내 배너 -->
+            <div class="mb-6 mt-4 bg-secondary-container/50 border border-secondary/20 rounded-xl p-4 flex gap-3 items-start">
+                <span class="material-symbols-outlined text-secondary text-[20px]" style="font-variation-settings: 'FILL' 1;">info</span>
+                <p class="text-[13px] text-on-surface-variant leading-relaxed">
+                    <strong class="text-on-surface">가입 승인</strong> 클릭 시 신청자에게 Discord DM이 발송됩니다.<br>
+                    신청자가 <strong>24시간 내</strong> 수락하면 팀원으로 확정됩니다. 미응답 시 자동으로 대기열로 복귀됩니다.
+                </p>
+            </div>
+
+            <!-- 신청자 목록 -->
+            <div id="applicants-container" class="space-y-3">
+                <div class="flex flex-col items-center justify-center py-20 text-on-surface-variant">
+                    <span class="material-symbols-outlined text-[48px] mb-3 opacity-30">person_search</span>
+                    <p class="text-[15px]">불러오는 중...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================== -->
     <!-- 화면명: 팀 현황 목록           -->
     <!-- ============================== -->
     <div id="page-status" class="page">
@@ -843,21 +936,25 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
 </main>
 <script>
     // ── 설정 상수 ──────────────────────────────────────────────────────────
-    // 디스코드 서버 영구 초대 링크 (만료 없음). 변경 시 이 한 곳만 수정하면 됩니다.
-    const DISCORD_INVITE_URL = 'https://discord.gg/3r8xYkApAc';
+    // 디스코드 서버 영구 초대 링크 (만료 없음). 변경 시 이 한 곳만 수정하세요.
+    const DISCORD_INVITE_URL = 'https://discord.gg/XTD4w2CVRv';
 
-    // TODO: 배포 환경에 맞춰 아래 API 주소를 변경하세요. (예: ngrok 주소)
-    const API_BASE_URL = 'http://localhost:8080'; // 개발 환경 (디스코드 봇 포트)
+    // API 서버 주소 자동 감지
+    // - 로컬(localhost/127.0.0.1) → 개발 봇 서버 주소
+    // - Vercel 배포 환경 → 아래 PROD_API_URL로 변경하세요
+    const PROD_API_URL = 'http://localhost:8080'; // ← 배포 시 실제 서버 주소로 교체
+    const isLocal = ['localhost', '127.0.0.1'].includes(location.hostname);
+    const API_BASE_URL = isLocal ? 'http://localhost:8080' : PROD_API_URL;
 
     // Navigation logic
     function navigate(pageId, options = {}) {
         // 로그인 체크 로직 (매칭 신청, 모집 페이지 진입 차단)
-        // const requireLoginPages = ['apply-step1', 'apply-step2', 'recruit-step1', 'recruit-step2', 'profile'];
-        // if (requireLoginPages.includes(pageId) && !localStorage.getItem('unique_id')) {
-        //     alert('로그인이 필요한 서비스입니다.');
-        //     if (typeof openAuthModal === 'function') openAuthModal();
-        //     return;
-        // }
+        const requireLoginPages = ['apply-step1', 'apply-step2', 'recruit-step1', 'recruit-step2', 'profile'];
+        if (requireLoginPages.includes(pageId) && !localStorage.getItem('unique_id')) {
+            alert('로그인이 필요한 서비스입니다.');
+            if (typeof openAuthModal === 'function') openAuthModal();
+            return;
+        }
 
         // Hide all .page elements
         document.querySelectorAll('.page').forEach(page => {
@@ -893,6 +990,18 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
         if (pageId === 'status') {
             loadTeams();
         }
+
+        // 내 팀 목록 페이지
+        if (pageId === 'my-teams') {
+            loadMyTeams();
+        }
+
+        // 신청서 확인 페이지
+        if (pageId === 'applicants') {
+            const prog = options.program || window._currentTeamProgram || '';
+            const leaderDid = options.leader_discord_id || window._currentLeaderDid || '';
+            if (prog) loadTeamApplicants(prog, leaderDid);
+        }
         
         // 동적 타이틀 렌더링
         if(pageId === 'apply-step1') {
@@ -900,6 +1009,71 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
             if(titleEl) {
                 titleEl.innerText = (options.mode === 'join') ? '가입 신청' : '매칭 신청';
             }
+        }
+
+        // [Task 3] Autofill: 이름 자동 기입(readonly) 및 스케줄 초기화
+        if(pageId === 'apply-step1' || pageId === 'recruit-step1') {
+            const uid = localStorage.getItem('unique_id');
+            if (uid) {
+                fetch(`${API_BASE_URL}/api/my-profile?uid=${uid}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if(data.success && data.data) {
+                            const name = data.data.name || localStorage.getItem('nickname') || "";
+                            
+                            // For apply-step1
+                            const applyNameInput = document.querySelector('#page-apply-step1 input[placeholder="홍길동"]');
+                            if(applyNameInput) {
+                                applyNameInput.value = name;
+                                applyNameInput.readOnly = true;
+                                applyNameInput.classList.add('bg-surface-variant', 'opacity-70', 'cursor-not-allowed');
+                            }
+                            
+                            // For recruit-step1
+                            const recruitNameInput = document.getElementById('name');
+                            if(recruitNameInput && pageId === 'recruit-step1') {
+                                recruitNameInput.value = name;
+                                recruitNameInput.readOnly = true;
+                                recruitNameInput.classList.add('bg-surface-variant', 'opacity-70', 'cursor-not-allowed');
+                            }
+                            
+                            if(data.data.schedule) {
+                                window.autofillSchedule = data.data.schedule;
+                            }
+                        }
+                    })
+                    .catch(console.error);
+            }
+        }
+
+        if (pageId === 'apply-step2') {
+            // Apply step2 schedule autofill
+            setTimeout(() => {
+                if (window.autofillSchedule) {
+                    const scheduledArray = window.autofillSchedule.split(',').map(s => s.trim()).filter(s => s);
+                    const slots = document.querySelectorAll('#page-apply-step2 .time-slot');
+                    // Reset all first
+                    slots.forEach(slot => {
+                        slot.classList.remove('bg-primary-container', 'border-primary/20');
+                        slot.classList.add('bg-surface-container');
+                    });
+                    // Apply user schedule (Normalize '월09' <-> '월9')
+                    slots.forEach(slot => {
+                        let val1 = slot.dataset.value; // e.g. '월09'
+                        let val2 = val1;
+                        const match = val1.match(/(^[가-힣]+)0?(\d+)$/);
+                        if (match) {
+                            val2 = `${match[1]}${match[2]}`; // e.g. '월9'
+                        }
+                        
+                        if (scheduledArray.includes(val1) || scheduledArray.includes(val2)) {
+                            slot.classList.remove('bg-surface-container');
+                            slot.classList.add('bg-primary-container', 'border-primary/20');
+                        }
+                    });
+                    window.autofillSchedule = null; // 초기값 바인딩 후에는 유저가 자유롭게 수정 가능
+                }
+            }, 50);
         }
     // --- [핵심 수정] loadDashboardPrograms를 navigate() 밖, 전역 스코프로 이동 ---
     // DOMContentLoaded call은 아래 전역에서 처리함 (이 위치에서는 제거)
@@ -946,7 +1120,10 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
     // Schedule Grid Initialization (Apply Step 2)
     function initGrid() {
         const days = 7;
-        const times = ["09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00"];
+        const times = [];
+        for (let i = 9; i <= 23; i++) {
+            times.push(`${i < 10 ? '0' + i : i}:00`);
+        }
         const container = document.getElementById('scheduleContainer');
         if(!container) return;
         
@@ -1192,13 +1369,25 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
             if (result.success && result.data.length > 0) {
                 programsData = result.data;
                 renderFormProgramOptions();
-                updateSidebarCategories(); // 사이드바 카테고리 동적 렌더링
+                updateSidebarCategories();
             } else {
                 console.warn('등록된 프로그램이 없습니다.');
+                _showProgramLoadError('등록된 프로그램이 없습니다.');
             }
         } catch (e) {
             console.error('Failed to load programs:', e);
+            _showProgramLoadError('⚠️ 서버 연결 실패. 븏이 켜져 있는지 확인하세요.');
         }
+    }
+
+    function _showProgramLoadError(msg) {
+        const targets = [
+            document.getElementById('apply-program-list'),
+            document.getElementById('recruit-program-list')
+        ];
+        targets.forEach(el => {
+            if (el) el.innerHTML = `<p class="text-sm text-error px-2 py-3">${msg}</p>`;
+        });
     }
 
     let allTeamsData = [];
@@ -1238,6 +1427,268 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
         }
         // [Action Item B] 재렌더링 트리거
         sortAndRenderTeams();
+    }
+
+    // ──────────────────────────────────────────────────────────
+    //  내 팀 현황 관련 JS 함수들
+    // ──────────────────────────────────────────────────────────
+
+    async function loadMyTeamsSidebar() {
+        const uid = localStorage.getItem('unique_id');
+        if (!uid) return;
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/my-teams?uid=${uid}`);
+            const data = await res.json();
+            const card = document.getElementById('sidebar-my-teams-card');
+            const subtitle = document.getElementById('sidebar-my-teams-subtitle');
+            const list = document.getElementById('sidebar-my-teams-list');
+            if (!card || !data.success || !data.teams?.length) return;
+
+            card.classList.remove('hidden');
+            subtitle.textContent = `${data.teams.length}개 팀 등록됨`;
+            list.innerHTML = data.teams.slice(0, 2).map(t => {
+                const prog = t.program || '미지정';
+                const filled = t.matched_members + 1; // 팀장 포함
+                const pct = Math.min(Math.round((filled / t.max_members) * 100), 100);
+                return `
+                <div class="bg-surface-container rounded-lg p-3 border border-outline-variant/30">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <span class="text-[12px] font-bold text-on-surface truncate max-w-[160px]">${prog}</span>
+                        <span class="text-[11px] text-on-surface-variant">${filled}/${t.max_members}명</span>
+                    </div>
+                    <div class="w-full h-1.5 bg-surface-container-high rounded-full overflow-hidden">
+                        <div class="h-full rounded-full transition-all duration-500" style="width:${pct}%; background: linear-gradient(90deg, #9c7bb4, #c97b8f)"></div>
+                    </div>
+                </div>`;
+            }).join('');
+            if (data.teams.length > 2) {
+                list.innerHTML += `<p class="text-[11px] text-center text-on-surface-variant">외 ${data.teams.length - 2}개 팀...</p>`;
+            }
+        } catch(e) { console.warn('사이드바 팀 현황 로드 실패:', e); }
+    }
+
+    async function loadMyTeams() {
+        const uid = localStorage.getItem('unique_id');
+        const container = document.getElementById('my-teams-container');
+        if (!uid || !container) return;
+
+        container.innerHTML = `<div class="flex flex-col items-center justify-center py-20 text-on-surface-variant">
+            <span class="material-symbols-outlined text-[48px] mb-3 opacity-30 animate-spin">progress_activity</span>
+            <p class="text-[15px]">팀 목록을 불러오는 중...</p></div>`;
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/my-teams?uid=${uid}`);
+            const data = await res.json();
+
+            if (!data.success || !data.teams?.length) {
+                container.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-24 text-on-surface-variant">
+                    <span class="material-symbols-outlined text-[64px] mb-4 opacity-20">group_add</span>
+                    <h3 class="font-headline-sm text-on-surface mb-2">등록된 팀이 없습니다</h3>
+                    <p class="text-[13px] text-center mb-6">팀을 등록하면 여기서 신청자를 관리할 수 있어요.</p>
+                    <button onclick="navigate('recruit-step1')" class="px-6 py-3 rounded-xl bg-primary text-on-primary font-label-md hover:opacity-90 transition-opacity">
+                        팀 등록하러 가기
+                    </button>
+                </div>`;
+                return;
+            }
+
+            container.innerHTML = data.teams.map((t, i) => {
+                const prog = t.program || '미지정';
+                const filled = t.matched_members + 1; // 팀장 포함
+                const remaining = t.max_members - filled;
+                const pct = Math.min(Math.round((filled / t.max_members) * 100), 100);
+                const date = t.applied_at ? new Date(t.applied_at).toLocaleDateString('ko-KR') : '-';
+                const statusColor = remaining > 0 ? 'text-secondary' : 'text-primary';
+                const statusText = remaining > 0 ? `${remaining}명 모집 중` : '팀 완성!';
+
+                return `
+                <div class="bg-white rounded-2xl border border-outline-variant/30 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                    <!-- 팀 카드 헤더 -->
+                    <div class="p-5 pb-4">
+                        <div class="flex items-start justify-between gap-3 mb-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 rounded-xl flex items-center justify-center text-on-primary font-bold text-[18px] shrink-0"
+                                     style="background: linear-gradient(135deg, #9c7bb4, #c97b8f)">
+                                    ${t.username?.[0] || '팀'}
+                                </div>
+                                <div>
+                                    <h3 class="font-headline-sm text-on-surface leading-tight">${prog}</h3>
+                                    <p class="text-[12px] text-on-surface-variant mt-0.5">팀장: ${t.username || '나'} · ${t.department || ''}  · ${date} 등록</p>
+                                </div>
+                            </div>
+                            <span class="shrink-0 px-3 py-1 rounded-full text-[12px] font-bold border ${remaining > 0 ? 'border-secondary/30 bg-secondary-container/50 text-secondary' : 'border-primary/30 bg-primary-container/50 text-primary'}">
+                                ${statusText}
+                            </span>
+                        </div>
+                        <!-- 인원 진행바 -->
+                        <div class="flex items-center gap-3">
+                            <div class="flex-1 h-2 bg-surface-container-high rounded-full overflow-hidden">
+                                <div class="h-full rounded-full transition-all duration-700" style="width:${pct}%; background: linear-gradient(90deg, #9c7bb4, #c97b8f)"></div>
+                            </div>
+                            <span class="text-[13px] font-bold text-on-surface shrink-0">${filled} / ${t.max_members}명</span>
+                        </div>
+                    </div>
+                    <!-- 액션 버튼 -->
+                    <div class="px-5 pb-5 flex gap-2">
+                        <button onclick="viewApplicants('${t.discord_id}', '${prog.replace(/'/g,"\\'")}', ${remaining})"
+                                class="flex-1 py-2.5 rounded-xl bg-secondary-container text-secondary font-label-md font-bold hover:bg-secondary/20 transition-colors flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined text-[18px]">assignment</span>
+                            신청자 목록 확인
+                        </button>
+                    </div>
+                </div>`;
+            }).join('');
+
+        } catch(e) {
+            container.innerHTML = `<div class="text-center py-12 text-on-surface-variant">불러오기 실패: ${e.message}</div>`;
+        }
+    }
+
+    function viewApplicants(leaderDiscordId, program, remaining) {
+        window._currentTeamProgram = program;
+        window._currentLeaderDid = leaderDiscordId;
+        window._teamRemaining = remaining;
+        navigate('applicants', { program, leader_discord_id: leaderDiscordId });
+    }
+
+    async function loadTeamApplicants(program, leaderDiscordId) {
+        const uid = localStorage.getItem('unique_id');
+        const container = document.getElementById('applicants-container');
+        const label = document.getElementById('applicants-program-label');
+        if (!uid || !container) return;
+
+        if (label) label.textContent = program || '전체';
+        container.innerHTML = `<div class="flex flex-col items-center justify-center py-20 text-on-surface-variant">
+            <span class="material-symbols-outlined text-[48px] mb-3 opacity-30 animate-spin">progress_activity</span>
+            <p class="text-[15px]">신청자 목록을 불러오는 중...</p></div>`;
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/team-applicants?program=${encodeURIComponent(program)}&uid=${uid}`);
+            const data = await res.json();
+
+            if (!data.success || !data.applicants?.length) {
+                container.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-24 text-on-surface-variant">
+                    <span class="material-symbols-outlined text-[64px] mb-4 opacity-20">person_off</span>
+                    <h3 class="font-headline-sm text-on-surface mb-2">신청자가 없습니다</h3>
+                    <p class="text-[13px] text-center">이 프로그램에 아직 매칭 신청자가 없습니다.<br>신청자가 생기면 여기에 표시됩니다.</p>
+                </div>`;
+                return;
+            }
+
+            container.innerHTML = data.applicants.map(a => {
+                const isPendingMine = a.pending_mine;
+                const isPendingOther = a.pending && !a.pending_mine;
+                const date = a.applied_at ? new Date(a.applied_at).toLocaleDateString('ko-KR') : '-';
+                const schedulePreview = a.weekly_schedule?.split(',').slice(0, 4).join(', ') || '미기재';
+                let btnHtml;
+                if (isPendingMine) {
+                    btnHtml = `<button disabled class="px-4 py-2 rounded-xl bg-surface-container-high text-on-surface-variant font-label-md text-[13px] flex items-center gap-1.5 cursor-not-allowed opacity-70">
+                        <span class="material-symbols-outlined text-[16px]">schedule</span> DM 발송됨 (응답 대기중)
+                    </button>`;
+                } else if (isPendingOther) {
+                    btnHtml = `<button disabled class="px-4 py-2 rounded-xl bg-surface-container text-outline font-label-md text-[13px] cursor-not-allowed opacity-60">
+                        다른 팀 초대중
+                    </button>`;
+                } else {
+                    btnHtml = `<button onclick="approveMember('${a.discord_id}', '${program.replace(/'/g,"\\'")}', this)"
+                            class="px-4 py-2 rounded-xl bg-primary text-on-primary font-label-md text-[13px] font-bold hover:opacity-90 transition-opacity flex items-center gap-1.5 active:scale-95">
+                        <span class="material-symbols-outlined text-[16px]">how_to_reg</span> 가입 승인
+                    </button>`;
+                }
+
+                return `
+                <div class="bg-white rounded-xl border ${isPendingMine ? 'border-secondary/40 bg-secondary-container/20' : 'border-outline-variant/30'} shadow-sm p-5 flex flex-col sm:flex-row gap-4">
+                    <!-- 아바타 + 기본 정보 -->
+                    <div class="flex items-start gap-3 flex-1">
+                        <div class="w-11 h-11 rounded-full flex items-center justify-center text-on-primary text-[16px] font-bold shrink-0"
+                             style="background: linear-gradient(135deg, #9c7bb4, #c97b8f)">
+                            ${a.username?.[0] || '?'}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="font-bold text-on-surface text-[15px]">${a.username || '이름없음'}</span>
+                                ${isPendingMine ? '<span class="px-2 py-0.5 rounded-full bg-secondary-container text-secondary text-[11px] font-bold">DM 발송됨</span>' : ''}
+                            </div>
+                            <p class="text-[13px] text-on-surface-variant mt-0.5">${a.department || '학과 미기재'}</p>
+                            <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+                                <span class="text-[12px] text-on-surface-variant flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-[14px]">stars</span>${a.skill || '특기 미기재'}
+                                </span>
+                                <span class="text-[12px] text-on-surface-variant flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-[14px]">schedule</span>${schedulePreview}
+                                </span>
+                                <span class="text-[12px] text-on-surface-variant flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-[14px]">calendar_today</span>${date} 신청
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 액션 버튼 -->
+                    <div class="flex items-center shrink-0">
+                        ${btnHtml}
+                    </div>
+                </div>`;
+            }).join('');
+
+        } catch(e) {
+            container.innerHTML = `<div class="text-center py-12 text-on-surface-variant">불러오기 실패: ${e.message}</div>`;
+        }
+    }
+
+    async function approveMember(applicantDiscordId, program, btn) {
+        const uid = localStorage.getItem('unique_id');
+        if (!uid) { alert('로그인이 필요합니다.'); return; }
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-outlined text-[16px] animate-spin">progress_activity</span> 처리 중...';
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/approve-member`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ leader_uid: uid, applicant_discord_id: applicantDiscordId, program })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                const msg = data.dm_sent
+                    ? '✅ Discord DM이 발송되었습니다!\n신청자가 24시간 내 수락하면 팀원으로 확정됩니다.'
+                    : '✅ 처리 완료 (미인증 사용자는 DM 발송 불가)';
+                
+                // 버튼 교체
+                btn.outerHTML = `<button disabled class="px-4 py-2 rounded-xl bg-secondary-container text-secondary font-label-md text-[13px] flex items-center gap-1.5 opacity-70">
+                    <span class="material-symbols-outlined text-[16px]">schedule</span> DM 발송됨
+                </button>`;
+
+                // 토스트 알림
+                showToast(msg, 'success');
+                // 사이드바도 업데이트
+                await loadMyTeamsSidebar();
+            } else {
+                showToast('❌ ' + (data.error || '처리 실패'), 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<span class="material-symbols-outlined text-[16px]">how_to_reg</span> 가입 승인';
+            }
+        } catch(e) {
+            showToast('❌ 네트워크 오류: ' + e.message, 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<span class="material-symbols-outlined text-[16px]">how_to_reg</span> 가입 승인';
+        }
+    }
+
+    function showToast(message, type = 'info') {
+        const existing = document.getElementById('toast-notification');
+        if (existing) existing.remove();
+        const colors = { success: 'bg-primary text-on-primary', error: 'bg-error text-on-error', info: 'bg-on-surface text-surface' };
+        const toast = document.createElement('div');
+        toast.id = 'toast-notification';
+        toast.className = `fixed bottom-24 left-1/2 -translate-x-1/2 z-[9999] px-6 py-3 rounded-2xl shadow-lg text-[14px] font-bold text-center max-w-sm ${colors[type] || colors.info} transition-all duration-300`;
+        toast.style.cssText = 'animation: fade-in 0.3s ease-out forwards;';
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3500);
     }
 
     async function loadTeams() {
@@ -1636,6 +2087,7 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
         const programRadio = document.querySelector('input[name="program"]:checked');
 
         const data = {
+            unique_id: localStorage.getItem('unique_id') || null,  // MEDIUM-5: 로그인 세션과 연동
             name: nameInput && nameInput.value ? nameInput.value : "이름미상",
             student_id: idInput && idInput.value ? idInput.value : "0000000",
             department: department,
@@ -1906,6 +2358,8 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
                 sidebarProfileContent.classList.remove('hidden');
                 sidebarLoginContent.classList.add('hidden');
                 if(sidebarProfileName) sidebarProfileName.innerText = nickname + '씨 환영합니다';
+                // 팀장이면 '내 팀 현황' 카드 표시
+                loadMyTeamsSidebar();
             }
         } else {
             if(loginBtn) { loginBtn.classList.add('md:block'); loginBtn.classList.remove('hidden'); }
@@ -2007,15 +2461,14 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
         const id = document.getElementById('signup-id').value.trim();
         const name = document.getElementById('signup-name').value.trim();
         const nicknameRaw = document.getElementById('signup-nickname').value.trim();
-        const key = document.getElementById('signup-key').value.trim();
         
-        if (!id || !name || !key) {
+        if (!id || !name) {
             return alert('필수 항목(* 표시)을 모두 입력해주세요.');
         }
         
         const nickname = nicknameRaw || name; // Fallback
         
-        const payload = { web_id: id, name: name, nickname: nickname, unique_id: key };
+        const payload = { web_id: id, name: name, nickname: nickname };
         
         try {
             const res = await fetch(API_BASE_URL + '/api/signup', {
@@ -2118,10 +2571,6 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
                     <div>
                         <label class="block text-label-sm text-on-surface-variant mb-1 ml-1">닉네임 (Nickname)</label>
                         <input type="text" id="signup-nickname" class="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-3 focus:border-primary outline-none transition-all placeholder:text-outline" placeholder="입력하지 않으면 이름으로 사용합니다">
-                    </div>
-                    <div>
-                        <label class="block text-label-sm text-on-surface-variant mb-1 ml-1">인증키 (Auth Key) <span class="text-error">*</span></label>
-                        <input type="text" id="signup-key" class="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-3 focus:border-primary outline-none transition-all" placeholder="발급받은 봇 인증키 입력">
                     </div>
                     
                     <button onclick="submitSignup()" class="w-full bg-gradient-to-r from-primary to-secondary text-on-primary py-3.5 rounded-xl font-label-md hover:shadow-lg transition-all active:scale-[0.98] mt-2">가입 완료하기</button>

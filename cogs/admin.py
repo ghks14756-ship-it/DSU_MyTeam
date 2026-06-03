@@ -106,41 +106,6 @@ class AdminCog(commands.Cog):
     async def refresh_activities(self, interaction: discord.Interaction) -> None:
         await interaction.response.send_modal(AddProgramModal())
 
-    # ── /대기목록 ─────────────────────────────────────────────────
-    @app_commands.command(name="대기목록", description="[관리자] 현재 매칭 대기 중인 신청자 목록을 출력합니다")
-    @app_commands.default_permissions(administrator=True)
-    async def waiting_list(self, interaction: discord.Interaction) -> None:
-        await interaction.response.defer(ephemeral=True, thinking=True)
-        try:
-            applicants = await self.bot.gsheet.fetch_applications()
-        except Exception as e:
-            log.error(f"대기목록 로드 실패: {e}")
-            applicants = []
-
-        # 구글 시트 실패 시 로컬 DB fallback
-        if not applicants:
-            applicants = await self.bot.db.get_all_active_applications()
-
-        if not applicants:
-            await interaction.followup.send("📭 현재 대기 중인 신청자가 없습니다.", ephemeral=True)
-            return
-
-        embed = discord.Embed(
-            title=f"📋 매칭 대기 목록 ({len(applicants)}명)",
-            color=discord.Color.blurple(),
-        )
-        lines = []
-        for i, app in enumerate(applicants[:20], 1):
-            name = app.get("이름") or app.get("username", "?")
-            dept = app.get("학과") or app.get("department", "?")
-            skill = app.get("전문분야_특기") or app.get("skill", "?")
-            lines.append(f"`{i:02d}` **{name}** | {dept} | ⭐{skill}")
-
-        embed.description = "\n".join(lines)
-        if len(applicants) > 20:
-            embed.set_footer(text=f"... 외 {len(applicants) - 20}명 더 있음")
-
-        await interaction.followup.send(embed=embed, ephemeral=True)
 
     # ── /활동목록 ─────────────────────────────────────────────────
     @app_commands.command(name="활동목록", description="등록된 MYDEX 활동 목록을 확인합니다")

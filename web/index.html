@@ -253,20 +253,21 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
                     </a>
                 </div>
 
-                <!-- [Bug 1 복구] 팀 매칭 현황 보기 Card -->
+                <!-- [Bug 1 복구] 팀 가입 신청서 확인 Card -->
                 <div class="glass-card rounded-xl p-6 shadow-sm border border-tertiary/20 bg-white flex flex-col text-left" id="sidebar-matching-status-card">
                     <div class="flex items-center gap-3 mb-4">
                         <div class="w-10 h-10 rounded-full bg-tertiary-container text-on-tertiary-container flex items-center justify-center shrink-0">
-                            <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">groups</span>
+                            <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">assignment_turned_in</span>
                         </div>
                         <h3 class="font-headline-sm text-on-surface">팀 신청 목록</h3>
                     </div>
-                    <p class="text-[13px] text-on-surface-variant mb-5 leading-relaxed">현재 팀원을 기다리고 있는 매칭 대기 중인 팀 목록을 확인하세요.</p>
-                    <button onclick="navigate('status')" class="w-full py-3 rounded-xl bg-tertiary-container text-on-tertiary-container font-label-md font-bold hover:bg-tertiary/20 transition-colors flex items-center justify-center gap-2 active:scale-95">
-                        <span class="material-symbols-outlined text-[18px]">manage_search</span>
-                        팀 매칭 현황 보기
+                    <p class="text-[13px] text-on-surface-variant mb-5 leading-relaxed">내 팀에 가입 신청한 멤버들의 신청서를 확인하고 승인하세요.</p>
+                    <button onclick="navigate('my-teams')" class="w-full py-3 rounded-xl bg-tertiary-container text-on-tertiary-container font-label-md font-bold hover:bg-tertiary/20 transition-colors flex items-center justify-center gap-2 active:scale-95">
+                        <span class="material-symbols-outlined text-[18px]">manage_accounts</span>
+                        팀 가입 신청서 확인
                     </button>
                 </div>
+
 
                 <!-- 내 팀 현황 Card (팀 등록 후 노출) -->
                 <div id="sidebar-my-teams-card" class="glass-card rounded-xl p-6 shadow-sm border border-secondary/20 bg-white hidden">

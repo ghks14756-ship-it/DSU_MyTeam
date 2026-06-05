@@ -21,6 +21,10 @@ def setup_api(app: web.Application, bot):
 @routes.options('/api/my-status')
 @routes.options('/api/my-profile')
 @routes.options('/api/generate-link-code')
+@routes.options('/api/approve-member')
+@routes.options('/api/team-applicants')
+@routes.options('/api/my-teams')
+@routes.options('/api/auth/discord-bind')
 async def options_handler(request):
     """CORS 처리"""
     return web.Response(headers={

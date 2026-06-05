@@ -27,8 +27,8 @@ tailwind.config = {
                 "on-tertiary-fixed": "#141b2c", "error": "#ba1a1a", "on-secondary-fixed": "#2c1325"
             },
             "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
-            "spacing": { "stack-sm": "0.5rem", "margin-mobile": "1rem", "stack-lg": "2.5rem", "gutter": "1.5rem", "stack-md": "1rem", "container-max": "1200px" },
-            "maxWidth": { "container-max": "1200px" },
+            "spacing": { "stack-sm": "0.5rem", "margin-mobile": "1rem", "stack-lg": "2.5rem", "gutter": "1.5rem", "stack-md": "1rem", "container-max": "1400px" },
+            "maxWidth": { "container-max": "1400px" },
             "fontFamily": {
                 "headline-sm": ["Plus Jakarta Sans"], "body-md": ["Plus Jakarta Sans"], "label-sm": ["Plus Jakarta Sans"],
                 "label-md": ["Plus Jakarta Sans"], "headline-md": ["Plus Jakarta Sans"], "body-lg": ["Plus Jakarta Sans"], "headline-lg": ["Plus Jakarta Sans"]
@@ -869,7 +869,7 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
     <!-- 화면명: 팀 현황 목록           -->
     <!-- ============================== -->
     <div id="page-status" class="page">
-        <div class="grid grid-cols-1 lg:grid-cols-[14] gap-8 items-start pb-12">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start pb-12">
             
             <!-- Left Sidebar: Program Categories -->
             <aside class="lg:col-span-3 space-y-4">
@@ -883,7 +883,7 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
             </aside>
 
             <!-- Middle Column: Team List -->
-            <section class="lg:col-span-8 space-y-6">
+            <section class="lg:col-span-6 space-y-6">
                 <div class="flex items-center justify-between mb-2">
                     <h2 id="team-list-title" class="font-headline-md text-headline-md text-on-surface font-bold">현재 매칭 진행중인 팀</h2>
                     <div class="flex gap-2 relative">

@@ -869,7 +869,7 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
     <!-- 화면명: 팀 현황 목록           -->
     <!-- ============================== -->
     <div id="page-status" class="page">
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start pb-12">
+        <div class="grid grid-cols-1 lg:grid-cols-[14] gap-8 items-start pb-12">
             
             <!-- Left Sidebar: Program Categories -->
             <aside class="lg:col-span-3 space-y-4">
@@ -883,7 +883,7 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
             </aside>
 
             <!-- Middle Column: Team List -->
-            <section class="lg:col-span-6 space-y-6">
+            <section class="lg:col-span-8 space-y-6">
                 <div class="flex items-center justify-between mb-2">
                     <h2 id="team-list-title" class="font-headline-md text-headline-md text-on-surface font-bold">현재 매칭 진행중인 팀</h2>
                     <div class="flex gap-2 relative">
@@ -1793,11 +1793,11 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
                     <div class="flex-1 overflow-hidden min-w-0">
                         <div class="flex justify-between items-start">
                             <div>
-                                <div class="flex items-center gap-3 mb-1">
-                                    <h3 class="font-headline-sm text-headline-sm text-on-surface truncate">${team['프로그램_선택'] || '프로그램 미정'}</h3>
-                                    <span class="font-label-sm text-label-sm bg-secondary-container text-on-secondary-container px-2.5 py-0.5 rounded-full ring-1 ring-secondary-container/50 whitespace-nowrap">${team['현재_매칭_인원']}/${team['모집_인원_수']}</span>
+                                <div class="flex items-start gap-3 mb-1">
+                                    <h3 class="font-headline-sm text-headline-sm text-on-surface line-clamp-2 leading-snug">${team['프로그램_선택'] || '프로그램 미정'}</h3>
+                                    <span class="font-label-sm text-label-sm bg-secondary-container text-on-secondary-container px-2.5 py-0.5 rounded-full ring-1 ring-secondary-container/50 whitespace-nowrap mt-1 flex-shrink-0">${team['현재_매칭_인원']}/${team['모집_인원_수']}</span>
                                 </div>
-                                <div class="flex flex-wrap gap-2 mb-3">
+                                <div class="flex flex-wrap gap-2 mb-3 mt-2">
                                     <span class="font-label-sm text-label-sm text-tertiary bg-white border border-outline-variant/30 px-2.5 py-1 rounded-full whitespace-nowrap">${team['팀장_학과'] || '소속 미상'}</span>
                                 </div>
                             </div>

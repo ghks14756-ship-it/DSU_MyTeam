@@ -30,7 +30,7 @@ class Config:
     MATCH_CHECK_INTERVAL_SECONDS: int = 60   # 이벤트 드리븐 매칭 체크 주기 (1분)
     DAY3_REMIND_HOURS: int = 72              # 3일 경과 시 DM 알림 (72h)
     DAY3_REMIND_CHECK_INTERVAL: int = 300    # 3일 체크 주기 (5분)
-    MIN_QUEUE_SIZE_FOR_MATCH: int = 2        # 자동 매칭 최소 대기자 수 (테스트 편의 유지)
+    MIN_QUEUE_SIZE_FOR_MATCH: int = 4        # 자동 매칭 최소 대기자 수 (기획안: 4명)
 
     # ── 채널/역할 이름 템플릿 ─────────────────────
     TEAM_TEXT_CHANNEL_PREFIX: str = "팀-텍스트"

@@ -129,3 +129,52 @@
     *   서버 데이터 기록(POST) 로직 및 각 단계별 유효성 검사, UI 전환 부드러움 향상 등이 주 목표입니다.
 2.  **구글 시트 데이터 화면 동적 바인딩**:
     *   대시보드가 처음 켜질 때 `GET /api/activities` API를 fetch로 호출해 구글 시트의 활동 프로그램을 실시간으로 받아오고, 이를 캐러셀 슬라이더 UI에 동적으로 주입하도록 스크립트를 구현해야 합니다.
+
+---
+
+### 📅 2026-06-05 (Claude Sonnet 4.6 Thinking - 긴급 버그 4건 수정 세션)
+
+*   **[Bug 2 수정 - 프로그램 선택 데이터 바인딩 오류]** `web/index.html`
+    *   **원인**: `submitApplication()` 및 `submitRecruit()` 에서 선택된 프로그램을 읽을 때 `programRadio.parentElement.innerText`를 사용. 이 방식은 `<label>` 태그 전체 텍스트를 읽어오며, radio input에 `checked` 속성이 HTML에 하드코딩되어 있어 유저가 무엇을 선택하든 항상 첫 번째 프로그램이 전송되던 버그.
+    *   **수정**: `programRadio.value.trim()` 으로 변경. radio input의 `value` 속성에 정확한 프로그램명이 이미 담겨 있음. `submitApplication`, `submitRecruit` 2곳 모두 수정.
+
+*   **[Bug 1 수정 - 메인 홈 UI 누락 복구]** `web/index.html`
+    *   **원인**: 대시보드 우측 사이드바의 Discord 카드 아래에 있어야 할 '팀 신청 목록(매칭 대기 중인 팀)으로 이동' 카드 UI 자체가 코드에서 증발해 있었음.
+    *   **수정**: Discord 카드 바로 아래에 `id="sidebar-matching-status-card"` 카드 UI를 복구. `onclick="navigate('status')"` 라우팅 연결. 기존 디자인 시스템 토큰(tertiary-container 등) 사용하여 디자인 일관성 유지.
+
+*   **[Bug 3 수정 - 구글 시트 신청 프로그램 컬럼 누락]** `api/routes.py`
+    *   **원인**: `/api/apply` 핸들러 내 `sheet_data` 딕셔너리에 `"program"` 키가 없었음. `record_application()` 함수는 내부에서 `data.get('program', '미정')`을 사용해 `매칭_대기_라인` 시트의 8번째 컬럼(인덱스 7)에 저장하는데, key 자체가 없으니 항상 `'미정'`으로 저장되던 버그.
+    *   **수정**: `sheet_data`에 `"program": program_name` 추가. `program_name`은 이미 `data.get('program', '').strip()`으로 정확히 추출되어 있었음.
+    *   **⚠️ 추가 수동 조치 필요**: 구글 시트 `매칭_대기_라인` 탭의 헤더(1행) 8번째 열(H열)이 프로그램 관련 컬럼인지 확인 필요. `gsheet_service.py`의 `record_application` 함수는 헤더 개수와 데이터 개수가 일치하지 않으면 `ValueError`를 발생시킴. 만약 시트에 프로그램 열이 없다면 H열 헤더에 `신청_프로그램` 등을 수동 추가.
+
+*   **[Bug 4 수정 - 랜덤 매칭 기준 인원수 원복]** `config.py`
+    *   **수정**: `MIN_QUEUE_SIZE_FOR_MATCH: int = 2` → `4` 로 변경. 기획안 기준 4명으로 정상화.
+
+---
+
+## 🖥️ 배포된 최신 홈페이지 확인 방법 (AI 필독)
+
+> **핵심 구조 이해**: 이 프로젝트는 **로컬 원본 파일** ↔ **Vercel 배포 서버** 두 군데가 분리되어 있습니다.
+> AI가 코드를 수정해도 자동으로 인터넷(Vercel)에 반영되지 않습니다. 반드시 아래 배포 절차를 밟아야 합니다.
+
+### 방법 1: 로컬에서 즉시 확인 (백엔드 없이 UI만 볼 때)
+파일 탐색기에서 `C:\Users\PC-1\.gemini\antigravity\scratch\DSU_MyTeam\web\index.html` 을 브라우저로 직접 열면 됩니다.
+또는 IDE에서 `index.html` 열기 → 우클릭 → `Open with Live Server` 클릭.
+
+### 방법 2: Vercel에 최신 코드 배포 (인터넷 링크 갱신)
+```powershell
+# DSU_MyTeam 폴더 안에서 실행
+cd C:\Users\PC-1\.gemini\antigravity\scratch\DSU_MyTeam
+git add .
+git commit -m "버그 4건 수정: 프로그램 선택, UI 복구, 시트 저장, 매칭 인원"
+git push origin main
+```
+GitHub에 push 하면 Vercel이 자동으로 감지하여 `https://dsu-my-team.vercel.app/` 을 새 버전으로 자동 배포합니다.
+배포 완료 여부는 https://vercel.com/asddsa-s-projects21/dsu-my-team 에서 확인 가능.
+
+### 주요 링크 모음
+- 🌐 **배포 홈페이지**: https://dsu-my-team.vercel.app/
+- 📊 **구글 시트 DB**: https://docs.google.com/spreadsheets/d/1UNw2YaTiGZ8GsOlXL0_GxsZycbDDp-axtyqQ48JLC7I/
+- 💬 **Discord 서버**: https://discord.gg/XTD4w2CVRv
+- ⚙️ **Vercel 대시보드**: https://vercel.com/asddsa-s-projects21/dsu-my-team
+- 🗂️ **로컬 최신 파일**: `C:\Users\PC-1\.gemini\antigravity\scratch\DSU_MyTeam\web\index.html`

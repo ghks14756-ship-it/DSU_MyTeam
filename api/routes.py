@@ -129,6 +129,7 @@ async def api_apply(request: web.Request):
             "student_id": data.get('student_id', '0000000'),
             "department": data.get('department', '미정'),
             "skill": data.get('skill', '특기 없음'),
+            "program": program_name,  # [Bug 3 수정] 프론트에서 넘어온 신청 프로그램 저장
             "condition_1": data.get('condition_1', ''),
             "condition_2": data.get('condition_2', ''),
             "condition_3": data.get('condition_3', ''),

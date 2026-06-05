@@ -253,6 +253,21 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
                     </a>
                 </div>
 
+                <!-- [Bug 1 복구] 팀 매칭 현황 보기 Card -->
+                <div class="glass-card rounded-xl p-6 shadow-sm border border-tertiary/20 bg-white flex flex-col text-left" id="sidebar-matching-status-card">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-full bg-tertiary-container text-on-tertiary-container flex items-center justify-center shrink-0">
+                            <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">groups</span>
+                        </div>
+                        <h3 class="font-headline-sm text-on-surface">팀 신청 목록</h3>
+                    </div>
+                    <p class="text-[13px] text-on-surface-variant mb-5 leading-relaxed">현재 팀원을 기다리고 있는 매칭 대기 중인 팀 목록을 확인하세요.</p>
+                    <button onclick="navigate('status')" class="w-full py-3 rounded-xl bg-tertiary-container text-on-tertiary-container font-label-md font-bold hover:bg-tertiary/20 transition-colors flex items-center justify-center gap-2 active:scale-95">
+                        <span class="material-symbols-outlined text-[18px]">manage_search</span>
+                        팀 매칭 현황 보기
+                    </button>
+                </div>
+
                 <!-- 내 팀 현황 Card (팀 등록 후 노출) -->
                 <div id="sidebar-my-teams-card" class="glass-card rounded-xl p-6 shadow-sm border border-secondary/20 bg-white hidden">
                     <div class="flex items-center gap-2 mb-4">
@@ -2094,7 +2109,7 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
             contact = `${typeText}: ${contactValueEl.value.trim()}`;
         }
         
-        // 프로그램 선택 수집
+        // 프로그램 선택 수집 (radio input의 value 속성을 직접 사용)
         const programRadio = document.querySelector('input[name="program"]:checked');
 
         const data = {
@@ -2102,7 +2117,7 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
             name: nameInput && nameInput.value ? nameInput.value : "이름미상",
             student_id: idInput && idInput.value ? idInput.value : "0000000",
             department: department,
-            program: programRadio ? programRadio.parentElement.innerText.trim().replace(/\n/g, ' - ') : "선택안함",
+            program: programRadio ? programRadio.value.trim() : "선택안함",
             skill: skill,
             condition_1: conditionArray[0] || "",
             condition_2: conditionArray[1] || "",
@@ -2183,7 +2198,7 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
             leader_name: leaderNameInput ? leaderNameInput.value || "웹 조장 유저" : "웹 조장 유저",
             leader_student_id: leaderStudentIdInput ? leaderStudentIdInput.value || "0000000" : "0000000",
             department: department, 
-            program: programRadio ? programRadio.parentElement.innerText.trim().replace(/\n/g, ' - ') : "선택안함",
+            program: programRadio ? programRadio.value.trim() : "선택안함",  // radio value 직접 사용
             summary: summaryInput ? summaryInput.value : "멤버 모집 중",
             description: description,
             target_members: typeof recruitCount !== 'undefined' ? recruitCount : 4

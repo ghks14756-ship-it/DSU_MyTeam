@@ -127,6 +127,7 @@ class DatabaseManager:
             "ALTER TABLE applications ADD COLUMN pending_approval INTEGER DEFAULT 0",
             "ALTER TABLE applications ADD COLUMN pending_team_leader_id TEXT DEFAULT NULL",
             "ALTER TABLE applications ADD COLUMN pending_since TEXT DEFAULT NULL",
+            "ALTER TABLE applications ADD COLUMN target_members INTEGER DEFAULT 4",
         ]
         for stmt in alter_stmts:
             try:
@@ -155,6 +156,7 @@ class DatabaseManager:
         has_conditions: bool = False,
         conditions: list | None = None,
         is_leader: bool = False,
+        target_members: int = 4,
     ) -> dict:
         """
         신청 데이터를 DB에 저장 (1인 1신청 중복 방지 로직 포함).
@@ -182,15 +184,15 @@ class DatabaseManager:
             INSERT INTO applications
                 (discord_id, username, student_id, department, skill,
                  activity_id, program, group_code, applied_at, expires_at,
-                 contact, weekly_schedule, has_conditions, conditions, is_leader)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 contact, weekly_schedule, has_conditions, conditions, is_leader, target_members)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             discord_id, username, student_id, department, skill,
             activity_id, program, group_code,
             now.isoformat(), expires.isoformat(),
             contact, weekly_schedule,
             1 if has_conditions else 0, cond_json,
-            1 if is_leader else 0
+            1 if is_leader else 0, target_members
         ))
         await self._conn.commit()
 

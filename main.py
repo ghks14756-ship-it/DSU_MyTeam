@@ -89,6 +89,12 @@ class DSUMyTeamBot(commands.Bot):
             self.web_app = web.Application()
             setup_api(self.web_app, self)
             
+            # [신규 추가] 로컬 테스트용 정적 파일 서빙 (웹 프론트엔드)
+            import os
+            web_path = Path(os.getcwd()) / "web"
+            if web_path.exists():
+                self.web_app.router.add_static('/', path=str(web_path), name='static')
+            
             self.runner = web.AppRunner(self.web_app)
             await self.runner.setup()
             self.site = web.TCPSite(self.runner, '0.0.0.0', 8080)

@@ -181,7 +181,8 @@ async def api_create_team(request: web.Request):
             activity_id=None,
             program=program_name,     # ★ 프로그램별 독립 매칭에 필수
             group_code=None,
-            is_leader=True
+            is_leader=True,
+            target_members=int(data.get('target_members', 4))
         )
         
         sheet_data = {
@@ -236,7 +237,7 @@ async def api_my_teams(request: web.Request):
                 "department": t.get("department", ""),
                 "applied_at": t.get("applied_at", ""),
                 "matched_members": matched_count,
-                "max_members": 4,
+                "max_members": t.get("target_members", 4),
             })
         return add_cors_headers(web.json_response({"success": True, "teams": result}))
     except Exception as e:

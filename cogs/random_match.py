@@ -115,14 +115,15 @@ def build_teams(applicants: list[dict], team_size: int) -> list[dict]:
     # ── 규칙 3 + 규칙 1 복합: 조건 없는 팀장 + 랜덤 대기자 ────────
     # 팀장이 먼저 대기열에서 팀원을 선착순으로 채움 (규칙 3-2)
     for leader in _available(p1_leaders):
-        needed = team_size - 1
+        target_size = leader.get("target_members") or team_size
+        needed = target_size - 1
         # 랜덤 대기자 → 조건 대기자 순으로 채움 (최대 LEADER_DASHBOARD_POOL_SIZE명 범위에서)
         candidate_pool = _available(p1_no_cond)[:Config.LEADER_DASHBOARD_POOL_SIZE] + _available(p3_cond)
         candidate_pool = _diverse_sort(candidate_pool)
         picked = candidate_pool[:needed]
 
         if picked:  # 1명 이상이면 팀 구성 (남은 자리는 추후 채움)
-            team = {"leader": leader, "members": [leader] + picked, "priority": 1}
+            team = {"leader": leader, "members": [leader] + picked, "priority": 1, "target_members": target_size}
             formed_teams.append(team)
             _mark_used([leader] + picked)
 
@@ -132,7 +133,7 @@ def build_teams(applicants: list[dict], team_size: int) -> list[dict]:
         chunk = avail_p1[i:i + team_size]
         if len(chunk) >= Config.MIN_QUEUE_SIZE_FOR_MATCH:
             # 첫 번째 유저(가장 일찍 신청)가 임시 팀장 (규칙 1)
-            team = {"leader": chunk[0], "members": chunk, "priority": 1}
+            team = {"leader": chunk[0], "members": chunk, "priority": 1, "target_members": team_size}
             formed_teams.append(team)
             _mark_used(chunk)
 
@@ -146,7 +147,8 @@ def build_teams(applicants: list[dict], team_size: int) -> list[dict]:
         return True
 
     for leader in _available(p2_leaders):
-        needed = team_size - 1
+        target_size = leader.get("target_members") or team_size
+        needed = target_size - 1
         candidates = [
             c for c in _available(p1_no_cond) + _available(p3_cond)
             if _matches(leader, c)
@@ -155,7 +157,7 @@ def build_teams(applicants: list[dict], team_size: int) -> list[dict]:
         picked = candidates[:needed]
 
         if picked:
-            team = {"leader": leader, "members": [leader] + picked, "priority": 2}
+            team = {"leader": leader, "members": [leader] + picked, "priority": 2, "target_members": target_size}
             formed_teams.append(team)
             _mark_used([leader] + picked)
 
@@ -164,7 +166,7 @@ def build_teams(applicants: list[dict], team_size: int) -> list[dict]:
     for i in range(0, len(avail_p3), team_size):
         chunk = avail_p3[i:i + team_size]
         if len(chunk) >= Config.MIN_QUEUE_SIZE_FOR_MATCH:
-            team = {"leader": chunk[0], "members": chunk, "priority": 3}
+            team = {"leader": chunk[0], "members": chunk, "priority": 3, "target_members": team_size}
             formed_teams.append(team)
             _mark_used(chunk)
 
@@ -403,6 +405,7 @@ async def execute_match_for_teams(
         leader = team_obj["leader"]
         members = team_obj["members"]
         priority = team_obj.get("priority", 1)
+        target_size = team_obj.get("target_members", team_size)
 
         # 1) DB team_room 생성
         team_id = await bot.db.create_team_room(
@@ -410,7 +413,7 @@ async def execute_match_for_teams(
             leader_id=str(leader["discord_id"]),
             team_name=f"매칭팀-{idx}",
             required_skills=[],
-            max_members=team_size,
+            max_members=target_size,
         )
 
         # 2) 채널 생성
@@ -852,12 +855,13 @@ class PendingApprovalView(discord.ui.View):
             return
 
         # 팀 생성 or 기존 팀에 편입 (간단 처리: team_rooms에 새 팀 생성)
+        target_size = leader_app.get("target_members") or 4
         team_id = await self.bot.db.create_team_room(
             activity_id=None,
             leader_id=self.leader_discord_id,
             team_name=f"{self.program[:10]}-수동매칭",
             required_skills=[],
-            max_members=4,
+            max_members=target_size,
         )
 
         # 둘 다 is_matched=1 처리

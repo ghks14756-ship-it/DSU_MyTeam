@@ -314,6 +314,14 @@ async def api_approve_member(request: web.Request):
             return add_cors_headers(web.json_response({"success": False, "error": "필수 파라미터 누락"}, status=400))
 
         leader_discord_id = f"WEB_{leader_uid}"
+
+        # ── 자기 자신 승인 방지 ──
+        if applicant_discord_id == leader_discord_id:
+            return add_cors_headers(web.json_response(
+                {"success": False, "error": "자기 자신을 팀에 승인할 수 없습니다."},
+                status=400
+            ))
+
         app = await bot.db.get_application(applicant_discord_id)
         if not app:
             return add_cors_headers(web.json_response({"success": False, "error": "신청자를 찾을 수 없습니다"}, status=404))

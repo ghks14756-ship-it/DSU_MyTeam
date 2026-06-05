@@ -265,6 +265,7 @@ class DatabaseManager:
         특정 프로그램의 대기 중 비팀장 신청자 목록.
         팀장 대시보드에서 '신청서 확인'용으로 사용.
         pending_approval이 없거나 이미 본인이 pending 중인 신청자 포함.
+        단, 팀장 본인의 신청은 제외.
         """
         now = datetime.now(timezone.utc).isoformat()
         async with self._conn.execute("""
@@ -272,10 +273,11 @@ class DatabaseManager:
             WHERE program = ?
               AND is_matched = 0
               AND is_leader = 0
+              AND discord_id != ?  -- 팀장 본인 제외
               AND expires_at > ?
               AND (pending_approval = 0 OR pending_team_leader_id = ?)
             ORDER BY applied_at ASC
-        """, (program, now, leader_discord_id)) as cursor:
+        """, (program, leader_discord_id, now, leader_discord_id)) as cursor:
             rows = await cursor.fetchall()
             return [dict(r) for r in rows]
 

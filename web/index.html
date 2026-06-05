@@ -1221,6 +1221,11 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
         };
 
         try {
+            // 배포 환경에 백엔드가 없으면 API 호출 스킵
+            if (!API_BASE_URL) {
+                setError('프로그램 목록을 불러오려면 봇 서버가 실행 중이어야 합니다.');
+                return;
+            }
             console.log('[Dashboard] Fetching /api/activities ...');
             const res = await fetch(API_BASE_URL + '/api/activities');
             console.log('[Dashboard] Response status:', res.status);
@@ -1363,6 +1368,12 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
     let programsData = [];
 
     async function loadPrograms() {
+        // 배포 환경에 백엔드가 없으면 API 호출 스킵
+        if (!API_BASE_URL) {
+            console.warn('[loadPrograms] API_BASE_URL이 설정되지 않아 프로그램 목록 로드를 건너뜁니다.');
+            _showProgramLoadError('신청 폼은 봇 서버가 실행 중일 때 이용 가능합니다.');
+            return;
+        }
         try {
             const res = await fetch(API_BASE_URL + '/api/activities');
             const result = await res.json();
@@ -1376,7 +1387,7 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
             }
         } catch (e) {
             console.error('Failed to load programs:', e);
-            _showProgramLoadError('⚠️ 서버 연결 실패. 븏이 켜져 있는지 확인하세요.');
+            _showProgramLoadError('서버 연결 실패. 봇이 켜져 있는지 확인하세요.');
         }
     }
 

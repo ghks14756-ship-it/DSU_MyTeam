@@ -942,7 +942,7 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
     // API 서버 주소 자동 감지
     // - 로컬(localhost/127.0.0.1) → 개발 봇 서버 주소
     // - Vercel 배포 환경 → 백엔드 봇 서버가 없으므로 API 호출은 graceful 처리됨
-    const PROD_API_URL = ''; // Vercel 배포: 별도 백엔드 서버 주소가 있으면 여기에 입력
+    const PROD_API_URL = 'https://holmes-advanced-tion-gasoline.trycloudflare.com'; // Cloudflare Tunnel
     const isLocal = ['localhost', '127.0.0.1'].includes(location.hostname);
     const API_BASE_URL = isLocal ? 'http://localhost:8080' : PROD_API_URL;
 

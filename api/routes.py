@@ -187,14 +187,14 @@ async def api_create_team(request: web.Request):
         
         sheet_data = {
             "team_id": team_id,
-            "leader_unique_id": team_id,
+            "leader_unique_id": unique_id if unique_id else team_id,  # ★ 실제 사용자 uid 사용
             "leader_name": leader_name,
             "leader_student_id": leader_student_id,
             "department": data.get('department', ''),
             "program": data.get('program', ''),
             "summary": data.get('summary', ''),
             "description": data.get('description', ''),
-            "target_members": data.get('target_members', 4),
+            "target_members": int(data.get('target_members', 4)),
             "team_status": "모집중"
         }
         await bot.gsheet.record_recruitment(sheet_data)
@@ -214,31 +214,56 @@ async def api_create_team(request: web.Request):
 
 @routes.get('/api/my-teams')
 async def api_my_teams(request: web.Request):
-    """팀장이 등록한 팀 목록 반환 (unique_id 기반)."""
+    """팀장이 등록한 팀 목록 반환 (구글시트 기반, unique_id 매칭)."""
     bot = request.app['bot']
     uid = request.rel_url.query.get('uid', '').strip()
     if not uid:
         return add_cors_headers(web.json_response({"success": False, "error": "uid 필요"}, status=400))
     try:
-        teams = await bot.db.get_my_teams(f"WEB_{uid}")
         result = []
-        for t in teams:
-            leader_did = t['discord_id']
-            async with bot.db._conn.execute(
-                "SELECT COUNT(*) as cnt FROM applications WHERE pending_team_leader_id = ? AND is_matched = 1",
-                (leader_did,)
-            ) as cur:
-                row = await cur.fetchone()
-                matched_count = row['cnt'] if row else 0
-            result.append({
-                "discord_id": leader_did,
-                "program": t.get("program", ""),
-                "username": t.get("username", ""),
-                "department": t.get("department", ""),
-                "applied_at": t.get("applied_at", ""),
-                "matched_members": matched_count,
-                "max_members": t.get("target_members", 4),
-            })
+
+        # ── 1순위: 구글시트에서 Leader_Unique_ID == uid 로 조회 (실제 모집인원 반영) ──
+        try:
+            all_gsheet_teams = await bot.gsheet.get_teams()
+            user_gsheet_teams = [
+                t for t in all_gsheet_teams
+                if str(t.get('Leader_Unique_ID', '')).strip() == uid
+            ]
+            for t in user_gsheet_teams:
+                matched = int(t.get('현재_매칭_인원', 1) or 1)
+                total   = int(t.get('모집_인원_수', 4) or 4)
+                result.append({
+                    "program":         t.get('프로그램_선택', ''),
+                    "username":        t.get('팀장_이름', ''),
+                    "department":      t.get('팀장_학과', ''),
+                    "applied_at":      t.get('생성시간', ''),
+                    "matched_members": max(0, matched - 1),   # 팀장 제외
+                    "max_members":     total,
+                })
+        except Exception as gs_err:
+            log.warning(f"구글시트 my-teams 조회 실패, DB 폴백 사용: {gs_err}")
+
+        # ── 2순위: 구글시트에 없으면 DB에서 폴백 조회 ──
+        if not result:
+            db_teams = await bot.db.get_my_teams(f"WEB_{uid}")
+            for t in db_teams:
+                leader_did = t['discord_id']
+                async with bot.db._conn.execute(
+                    "SELECT COUNT(*) as cnt FROM applications WHERE pending_team_leader_id = ? AND is_matched = 1",
+                    (leader_did,)
+                ) as cur:
+                    row = await cur.fetchone()
+                    matched_count = row['cnt'] if row else 0
+                result.append({
+                    "program":         t.get('program', ''),
+                    "username":        t.get('username', ''),
+                    "department":      t.get('department', ''),
+                    "applied_at":      t.get('applied_at', ''),
+                    "matched_members": matched_count,
+                    "max_members":     t.get('target_members', 4),
+                })
+
+        log.info(f"[my-teams] uid={uid} → {len(result)}개 팀 반환")
         return add_cors_headers(web.json_response({"success": True, "teams": result}))
     except Exception as e:
         log.error(f"my-teams API 오류: {e}")

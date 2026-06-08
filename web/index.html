@@ -1608,7 +1608,7 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
                         다른 팀 초대중
                     </button>`;
                 } else {
-                    btnHtml = `<button onclick="approveMember('${a.discord_id}', '${program.replace(/'/g,"\\'")}', this)"
+                    btnHtml = `<button onclick="approveMember('${a.unique_id}', '${program.replace(/'/g,"\\'")}', this)"
                             class="px-4 py-2 rounded-xl bg-primary text-on-primary font-label-md text-[13px] font-bold hover:opacity-90 transition-opacity flex items-center gap-1.5 active:scale-95">
                         <span class="material-symbols-outlined text-[16px]">how_to_reg</span> 가입 승인
                     </button>`;
@@ -1653,7 +1653,7 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
         }
     }
 
-    async function approveMember(applicantDiscordId, program, btn) {
+    async function approveMember(applicantUniqueId, program, btn) {
         const uid = localStorage.getItem('unique_id');
         if (!uid) { alert('로그인이 필요합니다.'); return; }
 
@@ -1664,7 +1664,7 @@ body { background-color: #f8f9ff; font-family: 'Plus Jakarta Sans', sans-serif; 
             const res = await fetch(`${API_BASE_URL}/api/approve-member`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ leader_uid: uid, applicant_discord_id: applicantDiscordId, program })
+                body: JSON.stringify({ leader_uid: uid, applicant_unique_id: applicantUniqueId, program })
             });
             const data = await res.json();
 

@@ -13,6 +13,9 @@ import logging
 import sys
 from pathlib import Path
 
+if sys.platform == 'win32':
+    sys.stdout.reconfigure(encoding='utf-8')
+
 import discord
 from discord.ext import commands
 

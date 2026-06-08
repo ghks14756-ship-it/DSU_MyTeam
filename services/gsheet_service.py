@@ -153,7 +153,7 @@ class GoogleSheetService:
         # 4. 순차적 조회 (Fallback)
         for sheet_name, uid_col in order:
             sheet_data = cached_sheets.get(sheet_name, [])
-            row = next((r for r in sheet_data if str(r.get(uid_col, "")).strip() == unique_id), None)
+            row = next((r for r in reversed(sheet_data) if str(r.get(uid_col, "")).strip() == unique_id), None)
             if row:
                 for col in possible_cols:
                     if col in row:
@@ -971,15 +971,16 @@ class GoogleSheetService:
         lines = ["📋 **팀 구성 리포트**\n"]
         for i, m in enumerate(members, start=1):
             d_id = m.get("discord_id", "")
+            u_id = m.get("unique_id", "")
             is_leader = bool(m.get("is_leader", 0))
             
             # Fallback 데이터 조회
-            name = self.get_fallback_data(cached_sheets, discord_id=d_id, field="이름", is_leader=is_leader)
-            dept = self.get_fallback_data(cached_sheets, discord_id=d_id, field="학과", is_leader=is_leader)
-            skill = self.get_fallback_data(cached_sheets, discord_id=d_id, field="특기", is_leader=is_leader)
-            schedule_str = self.get_fallback_data(cached_sheets, discord_id=d_id, field="주간_시간표", is_leader=is_leader)
-            contact_str = self.get_fallback_data(cached_sheets, discord_id=d_id, field="연락수단", is_leader=is_leader)
-            student_id = self.get_fallback_data(cached_sheets, discord_id=d_id, field="학번", is_leader=is_leader)
+            name = self.get_fallback_data(cached_sheets, discord_id=d_id, unique_id=u_id, field="이름", is_leader=is_leader)
+            dept = self.get_fallback_data(cached_sheets, discord_id=d_id, unique_id=u_id, field="학과", is_leader=is_leader)
+            skill = self.get_fallback_data(cached_sheets, discord_id=d_id, unique_id=u_id, field="특기", is_leader=is_leader)
+            schedule_str = self.get_fallback_data(cached_sheets, discord_id=d_id, unique_id=u_id, field="주간_시간표", is_leader=is_leader)
+            contact_str = self.get_fallback_data(cached_sheets, discord_id=d_id, unique_id=u_id, field="연락수단", is_leader=is_leader)
+            student_id = self.get_fallback_data(cached_sheets, discord_id=d_id, unique_id=u_id, field="학번", is_leader=is_leader)
 
             # 학번 마스킹 로직 (ex: 20230750 -> 2023****)
             if student_id != "미기재" and len(student_id) > 4:

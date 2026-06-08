@@ -290,16 +290,17 @@ async def _send_cross_dms(
 
     def _get_member_info(m: dict) -> tuple:
         d_id = m.get("discord_id", "")
+        u_id = m.get("unique_id", "")
         is_ldr = bool(m.get("is_leader", 0))
 
         if bot.gsheet and cached_sheets:
             try:
-                name = bot.gsheet.get_fallback_data(cached_sheets, discord_id=d_id, field="이름", is_leader=is_ldr)
-                dept = bot.gsheet.get_fallback_data(cached_sheets, discord_id=d_id, field="학과", is_leader=is_ldr)
-                skill = bot.gsheet.get_fallback_data(cached_sheets, discord_id=d_id, field="특기", is_leader=is_ldr)
-                schedule = bot.gsheet.get_fallback_data(cached_sheets, discord_id=d_id, field="주간_시간표", is_leader=is_ldr)
-                contact = bot.gsheet.get_fallback_data(cached_sheets, discord_id=d_id, field="연락수단", is_leader=is_ldr)
-                student_id = bot.gsheet.get_fallback_data(cached_sheets, discord_id=d_id, field="학번", is_leader=is_ldr)
+                name = bot.gsheet.get_fallback_data(cached_sheets, discord_id=d_id, unique_id=u_id, field="이름", is_leader=is_ldr)
+                dept = bot.gsheet.get_fallback_data(cached_sheets, discord_id=d_id, unique_id=u_id, field="학과", is_leader=is_ldr)
+                skill = bot.gsheet.get_fallback_data(cached_sheets, discord_id=d_id, unique_id=u_id, field="특기", is_leader=is_ldr)
+                schedule = bot.gsheet.get_fallback_data(cached_sheets, discord_id=d_id, unique_id=u_id, field="주간_시간표", is_leader=is_ldr)
+                contact = bot.gsheet.get_fallback_data(cached_sheets, discord_id=d_id, unique_id=u_id, field="연락수단", is_leader=is_ldr)
+                student_id = bot.gsheet.get_fallback_data(cached_sheets, discord_id=d_id, unique_id=u_id, field="학번", is_leader=is_ldr)
                 if student_id and student_id != "미기재" and len(student_id) > 4:
                     student_id = student_id[:4] + "*" * (len(student_id) - 4)
             except Exception as e:

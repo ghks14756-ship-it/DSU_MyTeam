@@ -124,6 +124,7 @@ async def api_apply(request: web.Request):
             group_code=None,
             contact=data.get('contact', ''),
             weekly_schedule=data.get('weekly_schedule', ''),
+            unique_id=unique_id,
         )
 
         sheet_data = {
@@ -187,7 +188,8 @@ async def api_create_team(request: web.Request):
             program=program_name,     # ★ 프로그램별 독립 매칭에 필수
             group_code=None,
             is_leader=True,
-            target_members=int(data.get('target_members', 4))
+            target_members=int(data.get('target_members', 4)),
+            unique_id=unique_id if unique_id else team_id,
         )
         
         sheet_data = {
@@ -289,6 +291,7 @@ async def api_team_applicants(request: web.Request):
         result = []
         for a in applicants:
             result.append({
+                "unique_id": a.get("unique_id", ""),
                 "discord_id": a.get("discord_id", ""),
                 "username": a.get("username", ""),
                 "department": a.get("department", ""),
@@ -312,14 +315,20 @@ async def api_approve_member(request: web.Request):
     try:
         data = await request.json()
         leader_uid = data.get('leader_uid', '').strip()
-        applicant_discord_id = data.get('applicant_discord_id', '').strip()
+        applicant_unique_id = data.get('applicant_unique_id', '').strip()
         program = data.get('program', '').strip()
 
-        if not leader_uid or not applicant_discord_id or not program:
+        if not leader_uid or not applicant_unique_id or not program:
             return add_cors_headers(web.json_response({"success": False, "error": "필수 파라미터 누락"}, status=400))
 
         leader_discord_id = f"WEB_{leader_uid}"
 
+        app = await bot.db.get_application_by_uid(applicant_unique_id)
+        if not app:
+            return add_cors_headers(web.json_response({"success": False, "error": "신청자를 찾을 수 없습니다"}, status=404))
+            
+        applicant_discord_id = app.get("discord_id", "")
+        
         # ── 자기 자신 승인 방지 ──
         if applicant_discord_id == leader_discord_id:
             return add_cors_headers(web.json_response(
@@ -327,15 +336,12 @@ async def api_approve_member(request: web.Request):
                 status=400
             ))
 
-        app = await bot.db.get_application(applicant_discord_id)
-        if not app:
-            return add_cors_headers(web.json_response({"success": False, "error": "신청자를 찾을 수 없습니다"}, status=404))
         if app.get("pending_approval") and app.get("pending_team_leader_id") != leader_discord_id:
             return add_cors_headers(web.json_response({"success": False, "error": "이미 다른 팀장이 초대 중인 신청자입니다"}))
         if app.get("is_matched"):
             return add_cors_headers(web.json_response({"success": False, "error": "이미 매칭 완료된 신청자입니다"}))
 
-        await bot.db.set_pending_approval(applicant_discord_id, leader_discord_id)
+        await bot.db.set_pending_approval_by_uid(applicant_unique_id, leader_discord_id)
 
         leader_app = await bot.db.get_application(leader_discord_id)
         leader_name = leader_app.get('username', '팀장') if leader_app else '팀장'

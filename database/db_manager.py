@@ -60,6 +60,7 @@ class DatabaseManager:
                 is_leader       INTEGER DEFAULT 0,
                 day3_dm_sent    INTEGER DEFAULT 0,
                 expiry_dm_sent  INTEGER DEFAULT 0,
+                unique_id       TEXT DEFAULT NULL,
                 FOREIGN KEY (activity_id) REFERENCES activities(id)
             );
 
@@ -128,6 +129,7 @@ class DatabaseManager:
             "ALTER TABLE applications ADD COLUMN pending_team_leader_id TEXT DEFAULT NULL",
             "ALTER TABLE applications ADD COLUMN pending_since TEXT DEFAULT NULL",
             "ALTER TABLE applications ADD COLUMN target_members INTEGER DEFAULT 4",
+            "ALTER TABLE applications ADD COLUMN unique_id TEXT DEFAULT NULL",
         ]
         for stmt in alter_stmts:
             try:
@@ -157,6 +159,7 @@ class DatabaseManager:
         conditions: list | None = None,
         is_leader: bool = False,
         target_members: int = 4,
+        unique_id: str | None = None,
     ) -> dict:
         """
         신청 데이터를 DB에 저장 (1인 1신청 중복 방지 로직 포함).
@@ -184,15 +187,15 @@ class DatabaseManager:
             INSERT INTO applications
                 (discord_id, username, student_id, department, skill,
                  activity_id, program, group_code, applied_at, expires_at,
-                 contact, weekly_schedule, has_conditions, conditions, is_leader, target_members)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 contact, weekly_schedule, has_conditions, conditions, is_leader, target_members, unique_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             discord_id, username, student_id, department, skill,
             activity_id, program, group_code,
             now.isoformat(), expires.isoformat(),
             contact, weekly_schedule,
             1 if has_conditions else 0, cond_json,
-            1 if is_leader else 0, target_members
+            1 if is_leader else 0, target_members, unique_id
         ))
         await self._conn.commit()
 
@@ -207,9 +210,17 @@ class DatabaseManager:
         }
 
     async def get_application(self, discord_id: str) -> dict | None:
-        """단일 유저 신청 조회."""
+        """단일 매칭 신청 조회."""
         async with self._conn.execute(
             "SELECT * FROM applications WHERE discord_id = ?", (discord_id,)
+        ) as cursor:
+            row = await cursor.fetchone()
+            return dict(row) if row else None
+
+    async def get_application_by_uid(self, unique_id: str) -> dict | None:
+        """단일 매칭 신청 조회 (unique_id 기준)."""
+        async with self._conn.execute(
+            "SELECT * FROM applications WHERE unique_id = ?", (unique_id,)
         ) as cursor:
             row = await cursor.fetchone()
             return dict(row) if row else None
@@ -311,6 +322,22 @@ class DatabaseManager:
                 pending_since = ?
             WHERE discord_id = ? AND is_matched = 0
         """, (leader_discord_id, now, applicant_discord_id))
+        await self._conn.commit()
+
+    async def set_pending_approval_by_uid(
+        self,
+        applicant_unique_id: str,
+        leader_discord_id: str,
+    ) -> None:
+        """신청자를 '팀장 승인 대기' 상태로 전환 (unique_id 기준)."""
+        now = datetime.now(timezone.utc).isoformat()
+        await self._conn.execute("""
+            UPDATE applications
+            SET pending_approval = 1,
+                pending_team_leader_id = ?,
+                pending_since = ?
+            WHERE unique_id = ? AND is_matched = 0
+        """, (leader_discord_id, now, applicant_unique_id))
         await self._conn.commit()
 
     async def clear_pending_approval(self, applicant_discord_id: str) -> None:

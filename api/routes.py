@@ -3,6 +3,7 @@ import uuid
 import logging
 from aiohttp import web
 from datetime import datetime, timezone
+import discord
 
 log = logging.getLogger("DSUMyTeam.API")
 
